@@ -1,0 +1,14 @@
+.suggestion-card {
+  padding: 1.1rem;
+}
+
+.suggestion-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.suggestion-header h3 {
+  margin: 0;
+}

@@ -1,0 +1,70 @@
+.progress-step {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 0.9rem;
+  align-items: center;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fafcff;
+  text-align: left;
+}
+
+.progress-step h3,
+.progress-step p {
+  margin: 0;
+}
+
+.progress-step.active {
+  border-color: rgba(76, 124, 255, 0.35);
+  background: rgba(76, 124, 255, 0.06);
+}
+
+.progress-step.completed {
+  border-color: rgba(28, 197, 142, 0.3);
+  background: rgba(28, 197, 142, 0.06);
+}
+
+.progress-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #dbe5fb;
+  color: var(--blue);
+  font-size: 0.82rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-icon.active {
+  background: #dbe5fb;
+  color: var(--blue);
+}
+
+.progress-icon.completed {
+  background: rgba(28, 197, 142, 0.18);
+  color: #0d9b6d;
+}
+
+.mini-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.34rem 0.72rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.mini-badge.active,
+.mini-badge.completed {
+  background: rgba(28, 197, 142, 0.12);
+  color: #0d9b6d;
+}
+
+.mini-badge.pending {
+  background: rgba(143, 154, 177, 0.14);
+  color: var(--text-soft);
+}

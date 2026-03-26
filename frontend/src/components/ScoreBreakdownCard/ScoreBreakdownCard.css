@@ -1,0 +1,30 @@
+.score-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.15rem;
+}
+
+.score-card h3,
+.score-card strong,
+.score-card small {
+  margin: 0;
+}
+
+.score-card small {
+  color: var(--text-muted);
+}
+
+.score-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.score-value strong {
+  font-size: 2.15rem;
+  color: #0db66e;
+}
+
+.score-value span {
+  color: #95a5c4;
+}

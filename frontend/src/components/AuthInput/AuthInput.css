@@ -1,0 +1,10 @@
+.auth-field {
+  display: grid;
+  gap: 0.45rem;
+  font-weight: 600;
+  color: #1f2b45;
+}
+
+.auth-field small {
+  color: var(--text-muted);
+}

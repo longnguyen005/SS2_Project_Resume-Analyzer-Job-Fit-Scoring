@@ -1,0 +1,16 @@
+.metric-tile {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1.15rem;
+}
+
+.metric-tile strong {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.metric-tile p,
+.metric-tile small {
+  margin: 0;
+  color: var(--text-muted);
+}

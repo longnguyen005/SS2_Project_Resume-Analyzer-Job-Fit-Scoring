@@ -1,0 +1,8 @@
+.feature-card {
+  padding: 1.15rem;
+}
+
+.feature-card h3,
+.feature-card p {
+  margin: 0;
+}

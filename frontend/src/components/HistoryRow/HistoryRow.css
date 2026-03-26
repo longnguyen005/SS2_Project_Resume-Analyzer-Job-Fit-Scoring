@@ -1,0 +1,43 @@
+.history-row {
+  display: grid;
+  grid-template-columns: 2.4fr 1.2fr 0.8fr 0.9fr 0.9fr 1.2fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.history-file {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.change-text.positive {
+  color: #17a76a;
+}
+
+.change-text.negative {
+  color: var(--red);
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.45rem;
+  justify-content: end;
+}
+
+@media (max-width: 1120px) {
+  .history-row {
+    grid-template-columns: 2fr 1fr 0.8fr 0.8fr 0.8fr 1fr;
+  }
+}
+
+@media (max-width: 880px) {
+  .history-row {
+    grid-template-columns: 1fr;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    margin-bottom: 0.75rem;
+  }
+}

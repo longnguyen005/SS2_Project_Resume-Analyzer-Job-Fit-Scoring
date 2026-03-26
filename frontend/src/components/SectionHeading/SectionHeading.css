@@ -1,0 +1,15 @@
+.section-heading {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 1.5rem;
+}
+
+.section-heading.center {
+  text-align: center;
+  justify-items: center;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 1.9rem;
+}

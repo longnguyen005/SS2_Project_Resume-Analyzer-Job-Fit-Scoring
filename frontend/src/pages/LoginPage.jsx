@@ -1,9 +1,11 @@
 import { useState } from "react";
+import AuthFrame from "../components/AuthFrame/AuthFrame";
+import AuthInput from "../components/AuthInput/AuthInput";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("student@example.com");
+  const [email, setEmail] = useState("week6@example.com");
   const [password, setPassword] = useState("password123");
   const [message, setMessage] = useState("");
 
@@ -24,32 +26,44 @@ export default function LoginPage() {
         throw new Error(data.detail || "Login failed");
       }
       localStorage.setItem("resume-analyzer-token", data.access_token);
-      setMessage("Login success. Token saved to localStorage.");
+      setMessage("Login success. Access token saved for Week 6 protected flows.");
     } catch (error) {
       setMessage(error.message);
     }
   }
 
+  const form = (
+    <form className="auth-form" onSubmit={handleSubmit}>
+      <AuthInput
+        label="Email"
+        type="email"
+        value={email}
+        onChange={(event) => setEmail(event.target.value)}
+        placeholder="name@example.com"
+      />
+      <AuthInput
+        label="Password"
+        type="password"
+        value={password}
+        onChange={(event) => setPassword(event.target.value)}
+        placeholder="Enter your password"
+      />
+      <button type="submit" className="nav-button primary full">
+        Sign in
+      </button>
+      {message ? <p className="form-message success">{message}</p> : null}
+    </form>
+  );
+
   return (
-    <section className="page split-page">
-      <div className="panel accent-panel">
-        <p className="eyebrow">Auth Flow</p>
-        <h2>Sign in for Week 6 testing</h2>
-        <p>Use this screen to verify the backend auth API and token storage flow before protected pages go live.</p>
-      </div>
-      <form className="panel form-panel" onSubmit={handleSubmit}>
-        <h3>Login</h3>
-        <label>
-          Email
-          <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" />
-        </label>
-        <label>
-          Password
-          <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" />
-        </label>
-        <button type="submit">Login</button>
-        {message ? <p className="form-message">{message}</p> : null}
-      </form>
-    </section>
+    <AuthFrame
+      title="Welcome back"
+      subtitle="Sign in to your account to continue"
+      form={form}
+      alternateText="Don't have an account?"
+      alternateLink="/register"
+      alternateLabel="Sign up"
+      footerNote="By continuing, you agree to our Terms of Service and Privacy Policy."
+    />
   );
 }

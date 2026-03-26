@@ -1,0 +1,25 @@
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(16px);
+}
+
+.top-nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+}
+
+.top-nav.compact .top-nav-inner {
+  min-height: 64px;
+}
+
+.top-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
