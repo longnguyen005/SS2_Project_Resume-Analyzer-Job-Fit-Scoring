@@ -32,3 +32,9 @@
   border-top: 1px solid var(--line);
   text-align: center;
 }
+
+@media (max-width: 880px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -7,8 +7,6 @@ export default function DashboardPage() {
         <p className="eyebrow">Overview</p>
         <h2>Week 6 dashboard scaffold</h2>
         <p>
-          This screen is ready for real API wiring in Week 7. For now it demonstrates the layout, navigation, and
-          data shape the frontend will consume from the backend.
         </p>
       </div>
 

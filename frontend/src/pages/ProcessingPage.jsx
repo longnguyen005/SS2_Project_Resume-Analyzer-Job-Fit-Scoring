@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, createSearchParams, useNavigate, useSearchParams } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo/BrandLogo";
 import ProgressStep from "../components/ProgressStep/ProgressStep";
 import { processingSteps } from "../lib/mockData";
 
 export default function ProcessingPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeIndex, setActiveIndex] = useState(0);
+  const cvId = searchParams.get("cvId");
 
   useEffect(() => {
     const stepDurations = [1800, 1800, 1600];
@@ -19,7 +21,14 @@ export default function ProcessingPage() {
           if (index < stepDurations.length - 1) {
             setActiveIndex(index + 1);
           } else {
-            navigate("/result");
+            navigate(
+              cvId
+                ? {
+                    pathname: "/result",
+                    search: createSearchParams({ cvId }).toString(),
+                  }
+                : "/result",
+            );
           }
         }, totalDelay),
       );
@@ -28,7 +37,7 @@ export default function ProcessingPage() {
     return () => {
       timers.forEach((timer) => window.clearTimeout(timer));
     };
-  }, [navigate]);
+  }, [cvId, navigate]);
 
   const progress = useMemo(() => {
     const checkpoints = [25, 68, 100];
@@ -76,7 +85,17 @@ export default function ProcessingPage() {
         <p className="tiny-note">
           <span className="spark">!</span> Did you know? Recruiters spend an average of 6 seconds reviewing a resume.
         </p>
-        <Link className="back-link center-link" to="/result">
+        <Link
+          className="back-link center-link"
+          to={
+            cvId
+              ? {
+                  pathname: "/result",
+                  search: createSearchParams({ cvId }).toString(),
+                }
+              : "/result"
+          }
+        >
           Skip to mock result
         </Link>
       </div>

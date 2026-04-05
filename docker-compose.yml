@@ -21,13 +21,20 @@ services:
       context: ./backend
     container_name: resume-analyzer-backend
     environment:
+      BACKEND_PUBLIC_URL: ${BACKEND_PUBLIC_URL:-http://localhost:8000}
+      FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:5173}
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/resume_analyzer}
       DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql+psycopg://postgres:postgres@db:5432/resume_analyzer}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:-change-me-session-secret}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
       UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
       MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-10}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
     depends_on:
       db:
         condition: service_healthy

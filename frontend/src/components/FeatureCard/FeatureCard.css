@@ -1,8 +1,21 @@
 .feature-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 24px 54px rgba(36, 46, 90, 0.08);
   padding: 1.15rem;
+}
+.feature-card:hover{
+   transform: translateY(-6px);
+   behavior: smooth;
 }
 
 .feature-card h3,
 .feature-card p {
   margin: 0;
+}
+
+.feature-card .feature-icon svg {
+  width: 18px;
+  height: 18px;
 }

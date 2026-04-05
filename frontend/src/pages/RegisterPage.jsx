@@ -1,17 +1,29 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AuthFrame from "../components/AuthFrame/AuthFrame";
 import AuthInput from "../components/AuthInput/AuthInput";
+import { useAuth } from "../context/AuthContext";
+import { apiRequest } from "../lib/api";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 const benefitItems = ["Unlimited resume analyses", "Track your progress over time", "AI-powered suggestions"];
 
 export default function RegisterPage() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [form, setForm] = useState({
-    full_name: "Nguyen Van A",
-    email: "student@example.com",
-    password: "password123",
+    full_name: "",
+    email: "",
+    password: "",
   });
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -19,19 +31,33 @@ export default function RegisterPage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
+    setIsSubmitting(true);
+    setMessage("");
+
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const data = await apiRequest("/auth/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail || "Registration failed");
-      }
-      setMessage(`Created user: ${data.email}`);
+      setMessageType("success");
+      setMessage(`Account created successfully for ${data.email}. Redirecting to sign in...`);
+      window.setTimeout(() => {
+        navigate("/login", {
+          replace: true,
+          state: {
+            flash: {
+              type: "success",
+              title: "Account Created",
+              message: `Your account for ${data.email} is ready. Please sign in to continue.`,
+            },
+          },
+        });
+      }, 900);
     } catch (error) {
+      setMessageType("error");
       setMessage(error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -41,7 +67,7 @@ export default function RegisterPage() {
         label="Full Name"
         value={form.full_name}
         onChange={(event) => updateField("full_name", event.target.value)}
-        placeholder="John Doe"
+        placeholder="Enter your name"
       />
       <AuthInput
         label="Email"
@@ -63,9 +89,9 @@ export default function RegisterPage() {
         <span>I agree to the Terms of Service and Privacy Policy</span>
       </label>
       <button type="submit" className="nav-button primary full">
-        Create account
+        {isSubmitting ? "Creating account..." : "Create account"}
       </button>
-      {message ? <p className="form-message success">{message}</p> : null}
+      {message ? <p className={`form-message ${messageType}`}>{message}</p> : null}
     </form>
   );
 
@@ -88,7 +114,6 @@ export default function RegisterPage() {
       alternateText="Already have an account?"
       alternateLink="/login"
       alternateLabel="Sign in"
-      footerNote="Week 6 keeps registration real, while the rest of the product remains static-first."
       extraPanel={extraPanel}
     />
   );

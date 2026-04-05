@@ -1,35 +1,73 @@
 .history-row {
   display: grid;
-  grid-template-columns: 2.4fr 1.2fr 0.8fr 0.9fr 0.9fr 1.2fr;
+  grid-template-columns: var(--history-columns);
   gap: 1rem;
   align-items: center;
   padding: 1rem;
   border-top: 1px solid var(--line);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.history-row > * {
+  min-width: 0;
 }
 
 .history-file {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
 }
 
-.change-text.positive {
-  color: #17a76a;
+.history-file div {
+  min-width: 0;
 }
 
-.change-text.negative {
+.history-file strong {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.history-meta {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.history-row small {
+  color: var(--text-muted);
+}
+
+.history-row .status-pill {
+  min-width: 92px;
+  justify-self: start;
+}
+
+.table-button,
+.table-icon {
+  min-height: 34px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  border-radius: 10px;
+  background: white;
+  border: 1px solid var(--line);
+  color: var(--navy);
+}
+
+.table-icon {
+  width: 34px;
+  padding: 0;
+}
+
+.table-icon.danger {
   color: var(--red);
-}
-
-.row-actions {
-  display: flex;
-  gap: 0.45rem;
-  justify-content: end;
 }
 
 @media (max-width: 1120px) {
   .history-row {
-    grid-template-columns: 2fr 1fr 0.8fr 0.8fr 0.8fr 1fr;
+    grid-template-columns: var(--history-columns);
   }
 }
 

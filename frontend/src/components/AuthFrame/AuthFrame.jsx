@@ -1,6 +1,8 @@
 import "./AuthFrame.css";
 import { Link } from "react-router-dom";
 import BrandLogo from "../BrandLogo/BrandLogo";
+import { FaGoogle, FaGithub } from "react-icons/fa";
+import { API_BASE_URL } from "../../lib/api";
 
 export default function AuthFrame({
   title,
@@ -16,7 +18,7 @@ export default function AuthFrame({
     <div className="auth-page">
       <div className="auth-shell">
         <Link className="back-link" to="/">
-          &lt;- Back to home
+          &lt; Back to home
         </Link>
         <div className="auth-stack">
           <div className="auth-brand">
@@ -32,12 +34,12 @@ export default function AuthFrame({
               <span>Or continue with</span>
             </div>
             <div className="auth-socials">
-              <button type="button" className="social-button">
-                Google
-              </button>
-              <button type="button" className="social-button">
-                GitHub
-              </button>
+              <a href={`${API_BASE_URL}/auth/oauth/google/login`} className="social-button">
+                <FaGoogle /> Google
+              </a>
+              <a href={`${API_BASE_URL}/auth/oauth/github/login`} className="social-button">
+                <FaGithub /> GitHub
+              </a>
             </div>
             <p className="auth-alternate">
               {alternateText} <Link to={alternateLink}>{alternateLabel}</Link>

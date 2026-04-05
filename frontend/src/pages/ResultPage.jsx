@@ -1,15 +1,11 @@
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import LoadingSpinner from "../components/LoadingSpinner";
 import ScoreBreakdownCard from "../components/ScoreBreakdownCard/ScoreBreakdownCard";
 import SuggestionCard from "../components/SuggestionCard/SuggestionCard";
 import TopNav from "../components/TopNav/TopNav";
-import {
-  areasForImprovement,
-  contentQualityLegend,
-  resultBreakdown,
-  resultSuggestions,
-  resultStrengths,
-  skillChartBars,
-} from "../lib/mockData";
+import { useAuth } from "../context/AuthContext";
+import { apiRequest } from "../lib/api";
 
 export default function ResultPage() {
   return (

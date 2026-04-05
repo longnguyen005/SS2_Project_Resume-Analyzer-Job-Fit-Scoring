@@ -114,7 +114,7 @@ project-root/
 #### 1. File Upload
 - Use `UploadFile` from FastAPI for streaming file reception
 - Validate MIME type (`application/pdf`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`)
-- Generate UUID-based filename to avoid collisions
+- Generate UUID-based filename to avoid collisions    
 - Save to `UPLOAD_DIR` volume shared with n8n container
 
 #### 2. n8n Webhook Integration

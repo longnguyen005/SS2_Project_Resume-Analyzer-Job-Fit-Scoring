@@ -12,21 +12,14 @@ export default function HistoryRow({ item }) {
       </div>
       <span>{item.date}</span>
       <div>
-        <strong>{item.score}</strong>
-        <small>{item.grade}</small>
+        <strong>{item.type}</strong>
+        <small>File type</small>
       </div>
-      <span className={`change-text ${item.change.startsWith("+") ? "positive" : "negative"}`}>{item.change}</span>
-      <span className="status-pill completed">{item.status}</span>
-      <div className="row-actions">
-        <button type="button" className="table-button">
-          View
-        </button>
-        <button type="button" className="table-icon">
-          DL
-        </button>
-        <button type="button" className="table-icon danger">
-          X
-        </button>
+      <span>{item.size}</span>
+      <span className={`status-pill ${item.status === "pending" ? "" : "completed"}`}>{item.status}</span>
+      <div className="history-meta">
+        <strong>{item.linkedJob}</strong>
+        <small>Job description</small>
       </div>
     </div>
   );

@@ -1,20 +1,45 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import FeatureCard from "../components/FeatureCard/FeatureCard";
 import Footer from "../components/Footer/Footer";
 import SectionHeading from "../components/SectionHeading/SectionHeading";
 import TopNav from "../components/TopNav/TopNav";
+import { useAuth } from "../context/AuthContext";
 import { featureCards, homeTrustPills } from "../lib/mockData";
 
+
 export default function HomePage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, logout } = useAuth();
+  const flash = location.state?.flash;
+
+  function handleLogout() {
+    logout();
+    navigate("/", { replace: true });
+  }
+
+  const navActions = isAuthenticated
+    ? [
+        { label: "History", to: "/history", variant: "ghost" },
+        { label: "Upload", to: "/upload", variant: "primary" },
+      ]
+    : [
+        { label: "Login", to: "/login", variant: "ghost" },
+        { label: "Sign Up", to: "/register", variant: "primary" },
+      ];
+
   return (
     <div className="site-page">
-      <TopNav
-        actions={[
-          { label: "Login", to: "/login", variant: "ghost" },
-          { label: "Sign Up", to: "/register", variant: "primary" },
-        ]}
-      />
+      <TopNav actions={navActions} />
       <main>
+        {flash ? (
+          <section className="flash-shell">
+            <div className={`shell flash-banner ${flash.type || "success"}`}>
+              <strong>{flash.title}</strong>
+              <p>{flash.message}</p>
+            </div>
+          </section>
+        ) : null}
         <section className="hero-section">
           <div className="shell hero-grid">
             <div className="hero-copy">
@@ -25,11 +50,11 @@ export default function HomePage() {
                 improvement, and optimize your job application success rate.
               </p>
               <div className="hero-actions">
-                <Link className="nav-button primary large" to="/upload">
-                  Upload Resume
+                <Link className="nav-button primary large" to={isAuthenticated ? "/upload" : "/login"}>
+                  {isAuthenticated ? "Upload Resume" : "Login to Start"}
                 </Link>
-                <Link className="nav-button secondary large" to="/result">
-                  See Example Report
+                <Link className="nav-button secondary large1" to={isAuthenticated ? "/job-descriptions" : "/result"}>
+                  {isAuthenticated ? "Manage Job Descriptions" : "See Example Report"}
                 </Link>
               </div>
               <div className="trust-row">
@@ -78,10 +103,14 @@ export default function HomePage() {
         <section className="section-spacer">
           <div className="shell">
             <div className="cta-banner">
-              <h2>Ready to improve your resume?</h2>
-              <p>Upload your resume now and get instant AI-powered feedback</p>
-              <Link className="nav-button secondary large" to="/upload">
-                Get Started for Free
+              <h2>{isAuthenticated ? "Ready for the next action?" : "Ready to improve your resume?"}</h2>
+              <p>
+                {isAuthenticated
+                  ? "Go to upload, review your history, or manage job descriptions from one place."
+                  : "Create an account or sign in to start using the real backend flows."}
+              </p>
+              <Link className="nav-button secondary large" to={isAuthenticated ? "/upload" : "/login"}>
+                {isAuthenticated ? "Go to Upload" : "Get Started"}
               </Link>
             </div>
           </div>

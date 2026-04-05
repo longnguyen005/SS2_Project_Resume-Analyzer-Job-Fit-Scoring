@@ -1,4 +1,8 @@
 .score-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 24px 54px rgba(36, 46, 90, 0.08);
   display: grid;
   gap: 0.75rem;
   padding: 1.15rem;
@@ -27,4 +31,25 @@
 
 .score-value span {
   color: #95a5c4;
+}
+
+.score-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: #d9dce5;
+  overflow: hidden;
+}
+
+.score-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.score-fill.blue {
+  background: var(--blue);
+}
+
+.score-fill.navy {
+  background: #11162e;
 }

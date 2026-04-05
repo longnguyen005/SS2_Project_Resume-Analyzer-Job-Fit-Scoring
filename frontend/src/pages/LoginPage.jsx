@@ -1,34 +1,60 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import AuthFrame from "../components/AuthFrame/AuthFrame";
 import AuthInput from "../components/AuthInput/AuthInput";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+import LoadingSpinner from "../components/LoadingSpinner";
+import { useAuth } from "../context/AuthContext";
+import { apiRequest } from "../lib/api";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("week6@example.com");
-  const [password, setPassword] = useState("password123");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    const flash = location.state?.flash;
+    if (!flash) {
+      return;
+    }
+
+    setMessageType(flash.type || "success");
+    setMessage(flash.message);
+  }, [location.state]);
 
   async function handleSubmit(event) {
     event.preventDefault();
+    setIsSubmitting(true);
+    setMessage("");
+
     const payload = new URLSearchParams();
     payload.append("username", email);
     payload.append("password", password);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const data = await apiRequest("/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: payload.toString(),
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail || "Login failed");
-      }
-      localStorage.setItem("resume-analyzer-token", data.access_token);
-      setMessage("Login success. Access token saved for Week 6 protected flows.");
+      login(data.access_token);
+      setMessageType("success");
+      setMessage("Signed in successfully. Redirecting to the home page...");
     } catch (error) {
+      setMessageType("error");
       setMessage(error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -48,10 +74,17 @@ export default function LoginPage() {
         onChange={(event) => setPassword(event.target.value)}
         placeholder="Enter your password"
       />
-      <button type="submit" className="nav-button primary full">
-        Sign in
+      <button type="submit" className="nav-button primary full" disabled={isSubmitting}>
+        {isSubmitting ? (
+          <>
+            <LoadingSpinner inline size={16} label="" />
+            Signing in...
+          </>
+        ) : (
+          "Sign in"
+        )}
       </button>
-      {message ? <p className="form-message success">{message}</p> : null}
+      {message ? <p className={`form-message ${messageType}`}>{message}</p> : null}
     </form>
   );
 

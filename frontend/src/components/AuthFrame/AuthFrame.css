@@ -25,6 +25,10 @@
 .auth-card {
   width: min(420px, 100%);
   padding: 1.5rem;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 24px 54px rgba(36, 46, 90, 0.08);
 }
 
 .auth-header {
@@ -35,7 +39,14 @@
 }
 
 .auth-header h1 {
+  margin: 0;
   font-size: 2rem;
+}
+
+.auth-header p,
+.auth-note {
+  margin: 0;
+  color: var(--text-soft);
 }
 
 .auth-form {
@@ -80,6 +91,10 @@
 }
 
 .social-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
   min-height: 42px;
   border-radius: 12px;
   background: white;
@@ -87,7 +102,11 @@
   color: #1f2b45;
   font-weight: 700;
 }
-
+.svg {
+  width: 18px;
+  height: 18px;
+  padding-top: 2px
+}
 .auth-alternate,
 .auth-note {
   text-align: center;
@@ -138,4 +157,8 @@
 
 .form-message.success {
   color: var(--green);
+}
+
+.form-message.error {
+  color: var(--red);
 }
