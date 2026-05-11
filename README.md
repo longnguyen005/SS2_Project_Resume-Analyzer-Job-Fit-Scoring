@@ -8,7 +8,7 @@ Du an duoc to chuc theo huong tach biet ro cac thanh phan:
 
 - `frontend`: giao dien nguoi dung bang React + Vite
 - `backend`: REST API bang FastAPI + SQLAlchemy + PostgreSQL
-- `n8n`: workflow orchestration cho webhook va mo rong pipeline xu ly
+- `n8n`: workflow orchestration trung tam cho pipeline xu ly CV
 - `docs`: tai lieu yeu cau, thiet ke, ke hoach va huong dan
 
 ## 2. Muc tieu du an
@@ -52,7 +52,10 @@ Du an duoc to chuc theo huong tach biet ro cac thanh phan:
 ### Workflow va tich hop
 
 - Trigger webhook sang `n8n` sau khi upload
-- Co cau truc san de mo rong thanh pipeline xu ly bat dong bo day du
+- Pipeline `n8n` staged cho `extract -> validate -> analyze -> complete/fail`
+- Dong bo `status`, `failure_reason`, `failed_stage` tu pipeline ve database
+- Workflow export chinh cua repo la `n8n/workflows/cv-analysis-http-pipeline-staged.json`
+- Workflow skeleton chi dung de smoke-test webhook va khong phai source of truth cho production-like flow
 
 ## 4. Kien truc tong the
 
@@ -66,19 +69,22 @@ Backend API (FastAPI)
         |
         +--> Local Uploads / R2-compatible Storage
         |
-        +--> AI Provider (OpenAI-compatible API)
-        |
         +--> n8n Webhook
+                |
+                +--> file-worker (extract / validate)
+                +--> ai-worker (analyze)
+                +--> persistence-worker (complete / save DB)
 ```
 
-Luong chinh:
+Luong chinh hien tai:
 
 1. Nguoi dung dang nhap va tao Job Description.
 2. Nguoi dung upload CV tu frontend.
-3. Backend luu file, ghi metadata vao PostgreSQL va dua CV vao background processing.
-4. Backend trich xuat text, validate noi dung, sau do gui du lieu sang AI provider.
-5. Ket qua phan tich duoc luu vao database.
-6. Frontend doc trang thai va hien thi ket qua cham diem.
+3. Backend luu file, ghi metadata vao PostgreSQL va trigger webhook n8n.
+4. n8n dieu phoi pipeline `claim -> extract -> validate -> analyze -> complete/fail`.
+5. `file-worker`, `ai-worker`, `persistence-worker` thuc hien cac stage xu ly chinh.
+6. Backend giu vai tro upload/public APIs va internal `claim/fail`.
+7. Frontend doc `status/result/history` va hien thi ket qua cham diem.
 
 ## 5. Cong nghe su dung
 
@@ -113,12 +119,15 @@ Luong chinh:
 .
 |-- backend/
 |   |-- app/
-|   |   |-- api/          # routers, dependencies
+|   |   |-- api/          # public routes + internal workflow claim/fail
 |   |   |-- core/         # config, security, oauth
 |   |   |-- db/           # session, base
 |   |   |-- models/       # SQLAlchemy models
 |   |   |-- schemas/      # Pydantic schemas
-|   |   `-- services/     # parser, analyzer, storage, workflow trigger
+|   |   |-- file_worker/  # extract / validate worker app
+|   |   |-- ai_worker/    # analyze worker app
+|   |   |-- persistence_worker/ # complete / save DB worker app
+|   |   `-- services/     # parser, analyzer, persistence, storage, workflow trigger
 |   |-- alembic/
 |   |-- alembic.ini
 |   |-- Dockerfile
@@ -236,6 +245,19 @@ Copy-Item .env.example .env
 - `N8N_WEBHOOK_URL`
 - `N8N_BASIC_AUTH_USER`
 - `N8N_BASIC_AUTH_PASSWORD`
+- `N8N_INTERNAL_SHARED_SECRET`
+- `N8N_WEBHOOK_TIMEOUT_SECONDS`
+- `N8N_WEBHOOK_MAX_ATTEMPTS`
+- `N8N_PROCESSING_CLAIM_TTL_SECONDS`
+
+Luu y:
+
+- Runtime contract mac dinh hien tai la `backend -> n8n -> file-worker -> ai-worker -> persistence-worker`.
+- `N8N_WEBHOOK_TIMEOUT_SECONDS=60` duoc chon cho workerized staged pipeline; neu giam xuong qua thap, webhook co the fail som truoc khi workflow ket thuc.
+- `R2_ENABLED=false` trong contract mac dinh. Chi bat `true` khi da cau hinh day du `R2_ENDPOINT_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`.
+- Import workflow `n8n/workflows/cv-analysis-http-pipeline-staged.json` vao n8n va activate sau khi import.
+- File JSON export trong repo duoc giu `active: false` de tranh commit trang thai runtime cua moi truong local.
+- `n8n/workflows/cv-analysis-skeleton.json` chi con dung cho webhook smoke-test lich su, khong nam trong active runtime contract.
 
 ### Luu y
 
@@ -260,6 +282,7 @@ docker compose up --build
 - Backend health check: `http://localhost:8000/health`
 - PostgreSQL: `localhost:5432`
 - n8n: `http://localhost:5678`
+- `file-worker`, `ai-worker`, `persistence-worker`: noi bo trong Docker network
 
 ### Buoc 3: Dung he thong
 
@@ -368,11 +391,12 @@ Du an da co nen tang hoat dong cho:
 - parse text + OCR fallback
 - AI analysis theo live provider
 - luu lich su va ket qua cham diem
-- webhook skeleton cho `n8n`
+- pipeline `n8n` staged voi 3 worker rieng: `file-worker`, `ai-worker`, `persistence-worker`
 
 Mot so phan van co the tiep tuc mo rong:
 
-- workflow `n8n` day du de xu ly bat dong bo end-to-end
+- OCR/download branch cloud-native hon trong `n8n`
+- black-box test rong hon cho webhook va failure matrix
 - storage cloud production-ready
 - logging, monitoring va retry strategy chi tiet hon
 - test tu dong cho backend/frontend

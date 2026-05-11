@@ -4,7 +4,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import TopNav from "../components/TopNav/TopNav";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
-import { Check, Shield, Sparkles } from "lucide-react";
+import { Upload, Check, Shield, Sparkles } from "lucide-react";
 
 const uploadHighlights = [
   { icon: Check, title: "Instant Analysis", description: "Get results in seconds" },
@@ -72,7 +72,7 @@ export default function UploadPage() {
       });
 
       setMessageType("success");
-      setMessage(`Upload thành công: ${data.filename}. Đang chuyển sang màn hình processing...`);
+      setMessage(`Upload successful: ${data.filename}. Redirecting to the processing page...`);
       navigate({
         pathname: "/processing",
         search: createSearchParams({ cvId: data.id }).toString(),
@@ -119,7 +119,9 @@ export default function UploadPage() {
           <section className="upload-card">
             <label className="dropzone">
               <input type="file" accept=".pdf,.docx" onChange={handleFileChange} />
-              <span className="dropzone-icon">UP</span>
+              <span className="dropzone-icon">
+                <Upload size={18} strokeWidth={2.2} />
+              </span>
               <h2>Drag and drop your resume here</h2>
               <p>or click to browse files</p>
               <span className="nav-button primary small">Browse Files</span>

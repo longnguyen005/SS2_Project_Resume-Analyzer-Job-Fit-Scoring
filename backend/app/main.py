@@ -1,88 +1,78 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from sqlalchemy import text
-from starlette.middleware.sessions import SessionMiddleware
-from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
+from fastapi import FastAPI
+from sqlalchemy import select, text, update
 
 from app.api.router import api_router
+from app.core.app_factory import create_application, configure_logging
 from app.core.config import settings
-from app.db.session import engine
-from app.schemas.common import APIErrorResponse, ErrorDetail
+from app.db.session import async_session_factory, engine
+from app.models import CvUpload
+
+configure_logging()
+
+logger = logging.getLogger(__name__)
+
+STUCK_JOB_CHECK_INTERVAL_SECONDS = 300  # 5 minutes
+
+
+async def _recover_stuck_jobs() -> None:
+    """Periodically detect and fail CVs stuck in 'processing' beyond the TTL."""
+    while True:
+        await asyncio.sleep(STUCK_JOB_CHECK_INTERVAL_SECONDS)
+        try:
+            ttl = settings.n8n_processing_claim_ttl_seconds
+            cutoff = datetime.now(timezone.utc) - timedelta(seconds=ttl)
+            async with async_session_factory() as db:
+                result = await db.execute(
+                    select(CvUpload.id).where(
+                        CvUpload.status == "processing",
+                        CvUpload.updated_at < cutoff,
+                    )
+                )
+                stuck_ids = [row[0] for row in result.all()]
+                if stuck_ids:
+                    await db.execute(
+                        update(CvUpload)
+                        .where(CvUpload.id.in_(stuck_ids))
+                        .values(
+                            status="failed",
+                            failure_reason="Processing timed out. The analysis pipeline did not complete in time. Please upload the file again.",
+                            failed_stage="orchestration",
+                            updated_at=datetime.now(timezone.utc),
+                        )
+                    )
+                    await db.commit()
+                    logger.warning(
+                        "event=stuck_jobs_recovered count=%s ttl_seconds=%s cv_ids=%s",
+                        len(stuck_ids), ttl, [str(cid) for cid in stuck_ids],
+                    )
+        except Exception:
+            logger.exception("event=stuck_job_recovery_error")
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    task = asyncio.create_task(_recover_stuck_jobs())
     yield
+    task.cancel()
     await engine.dispose()
 
 
-app = FastAPI(
+app = create_application(
     title=settings.app_name,
     version="0.1.0-week6",
+    router=api_router,
+    prefix=settings.api_v1_prefix,
     lifespan=lifespan,
+    include_cors=True,
+    include_sessions=True,
 )
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-app.add_middleware(SessionMiddleware, secret_key=settings.session_secret_key)
-
-app.include_router(api_router, prefix=settings.api_v1_prefix)
-
-
-@app.exception_handler(HTTPException)
-async def handle_http_exception(_: Request, exc: HTTPException) -> JSONResponse:
-    if isinstance(exc.detail, str):
-        payload = APIErrorResponse(message=exc.detail)
-    elif isinstance(exc.detail, list):
-        payload = APIErrorResponse(
-            message="Request failed.",
-            errors=[
-                ErrorDetail(
-                    field=".".join(str(part) for part in item.get("loc", [])) or None,
-                    message=item.get("msg", "Invalid value."),
-                    type=item.get("type"),
-                )
-                for item in exc.detail
-                if isinstance(item, dict)
-            ],
-        )
-    else:
-        payload = APIErrorResponse(message="Request failed.")
-
-    return JSONResponse(status_code=exc.status_code, content=payload.model_dump())
-
-
-@app.exception_handler(RequestValidationError)
-async def handle_validation_exception(_: Request, exc: RequestValidationError) -> JSONResponse:
-    payload = APIErrorResponse(
-        message="Validation failed.",
-        errors=[
-            ErrorDetail(
-                field=".".join(str(part) for part in error.get("loc", [])) or None,
-                message=error.get("msg", "Invalid value."),
-                type=error.get("type"),
-            )
-            for error in exc.errors()
-        ],
-    )
-    return JSONResponse(status_code=422, content=payload.model_dump())
-
-
-@app.exception_handler(Exception)
-async def handle_unexpected_exception(_: Request, __: Exception) -> JSONResponse:
-    payload = APIErrorResponse(message="Internal server error.")
-    return JSONResponse(status_code=HTTP_500_INTERNAL_SERVER_ERROR, content=payload.model_dump())
 
 
 @app.get("/health", tags=["health"])

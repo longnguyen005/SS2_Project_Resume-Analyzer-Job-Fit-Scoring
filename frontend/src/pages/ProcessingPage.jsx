@@ -1,61 +1,115 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, createSearchParams, useNavigate, useSearchParams } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo/BrandLogo";
+import LoadingSpinner from "../components/LoadingSpinner";
 import ProgressStep from "../components/ProgressStep/ProgressStep";
-import { processingSteps } from "../lib/mockData";
+import { apiRequest } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
+import {
+  buildProcessingStepViews,
+  getProcessingLoadingLabel,
+  getProcessingProgress,
+  getProcessingStatusCopy,
+  shouldShowProcessingLoadingState,
+} from "../lib/cvProcessingViewModel";
 
 export default function ProcessingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [activeIndex, setActiveIndex] = useState(0);
+  const { logout } = useAuth();
+  const [backendStatus, setBackendStatus] = useState("pending");
+  const [failureReason, setFailureReason] = useState("");
+  const [failedStage, setFailedStage] = useState("");
+  const [message, setMessage] = useState("");
+  const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const cvId = searchParams.get("cvId");
+  const hasRedirectedRef = useRef(false);
 
   useEffect(() => {
-    const stepDurations = [1800, 1800, 1600];
-    const timers = [];
+    if (!cvId) {
+      setMessage("No uploaded CV was found. Please return to upload and try again.");
+      setIsLoadingStatus(false);
+      return undefined;
+    }
 
-    stepDurations.forEach((duration, index) => {
-      const totalDelay = stepDurations.slice(0, index + 1).reduce((sum, value) => sum + value, 0);
-      timers.push(
-        window.setTimeout(() => {
-          if (index < stepDurations.length - 1) {
-            setActiveIndex(index + 1);
-          } else {
-            navigate(
-              cvId
-                ? {
-                    pathname: "/result",
-                    search: createSearchParams({ cvId }).toString(),
-                  }
-                : "/result",
-            );
+    let isMounted = true;
+    let pollingTimer = null;
+
+    async function loadStatus() {
+      try {
+        const data = await apiRequest(`/cv/${cvId}/status`);
+        if (!isMounted) {
+          return;
+        }
+
+        setBackendStatus(data.status);
+        setFailureReason(data.failure_reason || "");
+        setFailedStage(data.failed_stage || "");
+        setIsLoadingStatus(false);
+        setMessage("");
+
+        if (data.status === "completed") {
+          if (!hasRedirectedRef.current) {
+            hasRedirectedRef.current = true;
+            window.setTimeout(() => {
+              navigate({
+                pathname: "/result",
+                search: createSearchParams({ cvId }).toString(),
+              });
+            }, 900);
           }
-        }, totalDelay),
-      );
-    });
+          return;
+        }
+
+        if (data.status === "failed") {
+          setMessage(data.failure_reason || "Resume processing failed. Please upload the file again or try another CV.");
+          return;
+        }
+
+        pollingTimer = window.setTimeout(loadStatus, 1500);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setIsLoadingStatus(false);
+        if (error.status === 401) {
+          logout();
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        setMessage(error.message || "Unable to retrieve the current analysis status.");
+      }
+    }
+
+    loadStatus();
 
     return () => {
-      timers.forEach((timer) => window.clearTimeout(timer));
+      isMounted = false;
+      if (pollingTimer) {
+        window.clearTimeout(pollingTimer);
+      }
     };
-  }, [cvId, navigate]);
+  }, [cvId, logout, navigate]);
 
   const progress = useMemo(() => {
-    const checkpoints = [25, 68, 100];
-    return checkpoints[Math.min(activeIndex, checkpoints.length - 1)];
-  }, [activeIndex]);
+    return getProcessingProgress(backendStatus, failedStage);
+  }, [backendStatus, failedStage]);
+
+  const statusCopy = useMemo(() => {
+    return getProcessingStatusCopy(backendStatus, failureReason);
+  }, [backendStatus, failureReason]);
+
+  const loadingLabel = useMemo(() => {
+    return getProcessingLoadingLabel(backendStatus);
+  }, [backendStatus]);
+
+  const showLoadingState = shouldShowProcessingLoadingState(isLoadingStatus, backendStatus);
 
   const stepViews = useMemo(
-    () =>
-      processingSteps.map((step, index) => {
-        if (index < activeIndex) {
-          return { ...step, state: "completed", badge: "Completed" };
-        }
-        if (index === activeIndex) {
-          return { ...step, state: "active", badge: "Processing" };
-        }
-        return { ...step, state: "pending", badge: "Waiting" };
-      }),
-    [activeIndex],
+    () => buildProcessingStepViews(backendStatus, failedStage),
+    [backendStatus, failedStage],
   );
 
   return (
@@ -65,7 +119,12 @@ export default function ProcessingPage() {
         <section className="processing-card">
           <span className="processing-badge">AI</span>
           <h1>Analyzing Your Resume</h1>
-          <p>Our AI is working its magic...</p>
+          <p>{statusCopy}</p>
+          {showLoadingState ? (
+            <div className="processing-live-state" aria-live="polite">
+              <LoadingSpinner inline label={loadingLabel} size={18} />
+            </div>
+          ) : null}
           <div className="overall-progress">
             <div className="panel-header">
               <strong>Overall Progress</strong>
@@ -81,22 +140,19 @@ export default function ProcessingPage() {
             ))}
           </div>
           <div className="processing-note">This usually takes 10-15 seconds. Please don't close this window.</div>
+          {message ? <p className="page-feedback error">{message}</p> : null}
+          {backendStatus === "failed" ? (
+            <div className="hero-actions center-actions" style={{ marginTop: "1rem" }}>
+              <Link className="nav-button primary" to="/upload">Upload Again</Link>
+              <Link className="nav-button outline" to="/history">View History</Link>
+            </div>
+          ) : null}
         </section>
         <p className="tiny-note">
           <span className="spark">!</span> Did you know? Recruiters spend an average of 6 seconds reviewing a resume.
         </p>
-        <Link
-          className="back-link center-link"
-          to={
-            cvId
-              ? {
-                  pathname: "/result",
-                  search: createSearchParams({ cvId }).toString(),
-                }
-              : "/result"
-          }
-        >
-          Skip to mock result
+        <Link className="back-link center-link" to="/upload">
+          Return to Upload
         </Link>
       </div>
     </div>

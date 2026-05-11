@@ -66,6 +66,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="hero-preview">
+              <div className="preview-card-wrap">
               <div className="preview-card">
                 <div className="preview-lines">
                   <span className="preview-icon">CV</span>
@@ -86,6 +87,7 @@ export default function HomePage() {
                     <span />
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>

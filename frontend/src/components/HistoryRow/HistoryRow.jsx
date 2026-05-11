@@ -1,6 +1,11 @@
+import { Link } from "react-router-dom";
 import "./HistoryRow.css";
 
 export default function HistoryRow({ item }) {
+  const statusClassName = `status-pill${
+    item.status === "completed" ? " completed" : item.status === "failed" ? " failed" : ""
+  }`;
+
   return (
     <div className="history-row">
       <div className="history-file">
@@ -12,14 +17,25 @@ export default function HistoryRow({ item }) {
       </div>
       <span>{item.date}</span>
       <div>
-        <strong>{item.type}</strong>
-        <small>File type</small>
+        <strong>{item.score}</strong>
+        <small>Overall score</small>
       </div>
-      <span>{item.size}</span>
-      <span className={`status-pill ${item.status === "pending" ? "" : "completed"}`}>{item.status}</span>
+      <div>
+        <strong>{item.grade}</strong>
+        <small>Analysis grade</small>
+      </div>
+      <span className={statusClassName}>{item.status}</span>
       <div className="history-meta">
-        <strong>{item.linkedJob}</strong>
-        <small>Job description</small>
+        {item.canViewResult ? (
+          <Link className="table-button" to={`/result?cvId=${item.id}`}>
+            View Result
+          </Link>
+        ) : (
+          <>
+            <strong>Unavailable</strong>
+            <small>Result not ready yet</small>
+          </>
+        )}
       </div>
     </div>
   );

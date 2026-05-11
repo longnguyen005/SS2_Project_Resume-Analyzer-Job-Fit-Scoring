@@ -6,6 +6,18 @@ description: Architecture, data models, API design, and component breakdown for 
 
 # System Design & Architecture
 
+## Implementation Status Update (2026-04-26)
+
+The runtime architecture has been finalized as a workerized n8n-centered pipeline:
+
+- FastAPI handles upload, public read APIs, and internal `claim/fail`
+- n8n orchestrates `claim -> extract -> validate -> analyze -> complete/fail`
+- `file-worker` handles `extract/validate`
+- `ai-worker` handles `analyze`
+- `persistence-worker` handles `complete/save DB`
+
+This means the active runtime no longer uses backend legacy execution routes for `extract`, `analyze`, or `complete`.
+
 ## Architecture Overview
 **What is the high-level system structure?**
 

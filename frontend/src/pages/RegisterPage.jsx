@@ -5,7 +5,6 @@ import AuthInput from "../components/AuthInput/AuthInput";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
 
-const benefitItems = ["Unlimited resume analyses", "Track your progress over time", "AI-powered suggestions"];
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -95,16 +94,6 @@ export default function RegisterPage() {
     </form>
   );
 
-  const extraPanel = (
-    <div className="benefit-panel">
-      {benefitItems.map((item) => (
-        <div key={item} className="benefit-item">
-          <span className="benefit-dot" />
-          <span>{item}</span>
-        </div>
-      ))}
-    </div>
-  );
 
   return (
     <AuthFrame
@@ -114,7 +103,6 @@ export default function RegisterPage() {
       alternateText="Already have an account?"
       alternateLink="/login"
       alternateLabel="Sign in"
-      extraPanel={extraPanel}
     />
   );
 }

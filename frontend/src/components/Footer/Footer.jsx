@@ -6,7 +6,7 @@ const columns = [
   { title: "Resources", items: ["Blog", "Help Center", "Contact"] },
   { title: "Company", items: ["About", "Privacy", "Terms"] },
 ];
-
+  ``
 export default function Footer() {
   return (
     <footer className="site-footer">

@@ -25,6 +25,11 @@
   background: rgba(28, 197, 142, 0.06);
 }
 
+.progress-step.failed {
+  border-color: rgba(255, 107, 107, 0.35);
+  background: rgba(255, 107, 107, 0.08);
+}
+
 .progress-icon {
   width: 28px;
   height: 28px;
@@ -48,6 +53,11 @@
   color: #0d9b6d;
 }
 
+.progress-icon.failed {
+  background: rgba(255, 107, 107, 0.16);
+  color: #d64545;
+}
+
 .mini-badge {
   display: inline-flex;
   align-items: center;
@@ -62,6 +72,11 @@
 .mini-badge.completed {
   background: rgba(28, 197, 142, 0.12);
   color: #0d9b6d;
+}
+
+.mini-badge.failed {
+  background: rgba(255, 107, 107, 0.16);
+  color: #d64545;
 }
 
 .mini-badge.pending {

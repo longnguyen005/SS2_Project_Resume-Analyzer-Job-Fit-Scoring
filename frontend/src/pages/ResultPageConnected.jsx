@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, createSearchParams, useNavigate, useSearchParams } from "react-router-dom";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ScoreBreakdownCard from "../components/ScoreBreakdownCard/ScoreBreakdownCard";
 import SuggestionCard from "../components/SuggestionCard/SuggestionCard";
 import TopNav from "../components/TopNav/TopNav";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
+import { formatAnalysisProviderLabel, formatCvDateTime, normalizeResultData } from "../lib/cvReadModels";
 
 export default function ResultPageConnected() {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export default function ResultPageConnected() {
 
     try {
       const data = await apiRequest(`/cv/${cvId}/result`);
-      setResult(data);
+      setResult(normalizeResultData(data));
     } catch (error) {
       if (error.status === 401) {
         logout();
@@ -41,12 +42,32 @@ export default function ResultPageConnected() {
         return;
       }
 
-      setResult(null);
-      setMessage(error.message || "Unable to load CV result.");
+      if (error.status === 409) {
+        setResult(null);
+        setMessage(error.message || "The analysis is not completed yet. Please return to the processing page and wait a little longer.");
+      } else {
+        setResult(null);
+        setMessage(error.message || "Unable to load CV result.");
+      }
     } finally {
       setIsLoading(false);
     }
   }
+
+  const resultSearch = useMemo(() => {
+    if (!cvId) {
+      return "";
+    }
+    return createSearchParams({ cvId }).toString();
+  }, [cvId]);
+
+  const ringStyle = useMemo(() => {
+    const score = result?.overall_score ?? 0;
+    const degrees = Math.max(0, Math.min(score, 100)) * 3.6;
+    return {
+      background: `conic-gradient(var(--blue) 0 ${degrees}deg, #e4ebfb ${degrees}deg 360deg)`,
+    };
+  }, [result]);
 
   if (isLoading) {
     return <LoadingSpinner fullScreen label="Loading CV result..." />;
@@ -63,13 +84,20 @@ export default function ResultPageConnected() {
       />
       <main className="section-spacer">
         <div className="shell report-shell">
-          <Link className="back-link" to="/upload">
-            Analyze Another Resume
-          </Link>
 
           {message ? (
             <section className="report-section">
-              <p className="page-feedback error">{message}</p>
+              <div className="empty-state">
+                <strong>{message}</strong>
+                <div className="hero-actions">
+                  <button type="button" className="nav-button secondary" onClick={loadResult}>
+                    Retry Loading Result
+                  </button>
+                  <Link className="nav-button primary" to="/upload">
+                    Upload Another Resume
+                  </Link>
+                </div>
+              </div>
             </section>
           ) : null}
 
@@ -78,8 +106,9 @@ export default function ResultPageConnected() {
               <div className="report-heading">
                 <h1>Resume Analysis Report</h1>
                 <p>
-                  {result.filename} · {formatDateTime(result.analyzed_at)}
+                  {result.filename} - {formatCvDateTime(result.analyzed_at)}
                 </p>
+                {result.analysis_provider ? <p>Analysis source: {formatAnalysisProviderLabel(result.analysis_provider)}</p> : null}
               </div>
 
               <section className="overview-panel">
@@ -93,7 +122,7 @@ export default function ResultPageConnected() {
                   <p>{result.summary}</p>
                 </div>
                 <div className="ring-visual">
-                  <div className="ring-circle">
+                  <div className="ring-circle" style={ringStyle}>
                     <div className="ring-inner" />
                   </div>
                 </div>
@@ -202,14 +231,4 @@ export default function ResultPageConnected() {
       </main>
     </div>
   );
-}
-
-function formatDateTime(value) {
-  return new Date(value).toLocaleString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }

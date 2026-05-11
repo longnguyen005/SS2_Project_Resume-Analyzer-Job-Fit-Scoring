@@ -36,6 +36,10 @@
   min-width: 0;
 }
 
+.history-meta .table-button {
+  justify-self: start;
+}
+
 .history-row small {
   color: var(--text-muted);
 }
@@ -43,6 +47,11 @@
 .history-row .status-pill {
   min-width: 92px;
   justify-self: start;
+}
+
+.history-row .status-pill.failed {
+  background: rgba(255, 109, 115, 0.14);
+  color: #d34045;
 }
 
 .table-button,

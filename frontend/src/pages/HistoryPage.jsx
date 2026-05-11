@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Clock3, FileText, Files, Upload } from "lucide-react";
 import HistoryRow from "../components/HistoryRow/HistoryRow";
 import MetricTile from "../components/MetricTile/MetricTile";
 import TopNav from "../components/TopNav/TopNav";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
-import { FileText, Clock3, Files, Upload } from "lucide-react";
+import { buildHistoryRowViewModel, calculateAverageScore, formatCvDate } from "../lib/cvReadModels";
 
 export default function HistoryPage() {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ export default function HistoryPage() {
       const data = await apiRequest("/cv");
       setUploads(data);
     } catch (error) {
-      handleProtectedPageError(error, "Không thể tải lịch sử upload.");
+      handleProtectedPageError(error, "Unable to load upload history.");
     } finally {
       setIsLoading(false);
     }
@@ -42,34 +43,35 @@ export default function HistoryPage() {
     setMessage(error.message || fallbackMessage);
   }
 
-  function handleLogout() {
-    logout();
-    navigate("/", { replace: true });
-  }
-
+  const completedUploads = uploads.filter((item) => item.status === "completed");
+  const latestCompletedUpload = completedUploads[0] || null;
   const metrics = [
     {
       icon: <FileText size={18} strokeWidth={2.2} />,
       label: "Total Uploads",
       value: String(uploads.length),
+      note: "Resumes stored in your pipeline",
       accent: "blue",
     },
     {
       icon: <Clock3 size={18} strokeWidth={2.2} />,
-      label: "Pending",
-      value: String(uploads.filter((item) => item.status === "pending").length),
+      label: "Completed",
+      value: String(completedUploads.length),
+      note: "Analyses ready to review",
       accent: "orange",
     },
     {
       icon: <Files size={18} strokeWidth={2.2} />,
-      label: "File Types",
-      value: uploads.length ? Array.from(new Set(uploads.map((item) => item.file_type.toUpperCase()))).join(", ") : "-",
+      label: "Average Score",
+      value: calculateAverageScore(uploads),
+      note: "Across completed resume analyses",
       accent: "purple",
     },
     {
       icon: <Upload size={18} strokeWidth={2.2} />,
       label: "Latest Upload",
-      value: uploads[0] ? formatDate(uploads[0].created_at) : "-",
+      value: uploads[0] ? formatCvDate(uploads[0].created_at) : "-",
+      note: uploads[0]?.filename || "No uploads yet",
       accent: "green",
     },
   ];
@@ -86,7 +88,7 @@ export default function HistoryPage() {
         <div className="shell report-shell">
           <div className="page-intro">
             <h1>Resume History</h1>
-            <p>Track your resume improvements and view past analyses</p>
+            <p>Track your resume improvements and review completed analyses.</p>
           </div>
 
           <div className="metric-grid">
@@ -96,7 +98,12 @@ export default function HistoryPage() {
           </div>
 
           <section className="journey-card">
-            <h2>Protected API Status</h2>
+            <h2>Your Progress Journey</h2>
+            <p>
+              {completedUploads.length > 0
+                ? `You have ${completedUploads.length} completed analyses. Latest score: ${latestCompletedUpload?.analysis_summary?.overall_score ?? "-"} / 100.`
+                : "Upload a resume to start building your analysis history."}
+            </p>
           </section>
 
           <section className="history-card">
@@ -107,20 +114,20 @@ export default function HistoryPage() {
               <div className="history-header">
                 <span>Resume File</span>
                 <span>Upload Date</span>
-                <span>Type</span>
-                <span>Size</span>
+                <span>Score</span>
+                <span>Grade</span>
                 <span>Status</span>
-                <span>Linked JD</span>
+                <span>Result</span>
               </div>
               {isLoading ? <p className="page-feedback">Loading...</p> : null}
               {!isLoading && message ? <p className="page-feedback error">{message}</p> : null}
               {!isLoading && !message && uploads.length === 0 ? (
                 <div className="empty-state">
-                  <strong>There are no cv upload</strong>
+                  <strong>No CV uploads yet</strong>
                 </div>
               ) : null}
               {uploads.map((item) => (
-                <HistoryRow key={item.id} item={mapUploadToHistoryRow(item)} />
+                <HistoryRow key={item.id} item={buildHistoryRowViewModel(item)} />
               ))}
             </div>
           </section>
@@ -128,35 +135,4 @@ export default function HistoryPage() {
       </main>
     </div>
   );
-}
-
-function formatDate(value) {
-  return new Date(value).toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
-
-function formatBytes(size) {
-  if (size < 1024) {
-    return `${size} B`;
-  }
-
-  if (size < 1024 * 1024) {
-    return `${(size / 1024).toFixed(1)} KB`;
-  }
-
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function mapUploadToHistoryRow(item) {
-  return {
-    file: item.filename,
-    size: formatBytes(item.file_size_bytes),
-    date: formatDate(item.created_at),
-    type: item.file_type.toUpperCase(),
-    linkedJob: item.job_description_id ? "Linked" : "None",
-    status: item.status,
-  };
 }

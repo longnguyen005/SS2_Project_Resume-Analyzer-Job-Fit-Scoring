@@ -62,19 +62,6 @@ description: Task breakdown, milestones, dependencies, timeline, and risk mitiga
   - [ ] `JDCreate`, `JDResponse`
   - [ ] `UploadResponse`, `AnalysisResultResponse`, `HistoryResponse`, `CompareResponse`
 
-### Phase 2: CV Upload & File Processing
-- [ ] **Task 2.1:** `POST /api/v1/cv/upload` endpoint
-  - [ ] Accept multipart/form-data (PDF/DOCX, max 10 MB)
-  - [ ] Validate file type (MIME + extension check)
-  - [ ] Save file to shared volume
-  - [ ] Insert `cv_upload` record (status: `pending`)
-  - [ ] Return upload ID + status
-- [ ] **Task 2.2:** Webhook trigger to n8n
-  - [ ] HTTP POST to n8n webhook URL with cv_upload_id, file_path, file_type, optional JD
-  - [ ] Handle n8n unavailability (retry / mark as failed)
-- [ ] **Task 2.3:** Pydantic schemas for request/response validation
-  - [ ] `UploadResponse`, `AnalysisResultResponse`, `HistoryResponse`, `CompareResponse`
-
 ### Phase 3: n8n Processing Pipeline
 - [ ] **Task 3.1:** Create n8n workflow: Webhook Trigger
   - [ ] Receive POST with cv_upload_id, storage_key, file_type, job_description_id

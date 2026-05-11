@@ -1,3 +1,53 @@
+x-runtime-env: &runtime-env
+  BACKEND_PUBLIC_URL: ${BACKEND_PUBLIC_URL:-http://localhost:8000}
+  FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:5173}
+  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/resume_analyzer}
+  DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql+psycopg://postgres:postgres@db:5432/resume_analyzer}
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+  SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:-change-me-session-secret}
+  ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+
+x-storage-env: &storage-env
+  UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
+  MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-10}
+  R2_ENABLED: ${R2_ENABLED:-false}
+  R2_ENDPOINT_URL: ${R2_ENDPOINT_URL:-}
+  R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+  R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+  R2_BUCKET_NAME: ${R2_BUCKET_NAME:-resume-analyzer-files}
+  R2_BUCKET_REGION: ${R2_BUCKET_REGION:-auto}
+  R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
+  R2_KEY_PREFIX: ${R2_KEY_PREFIX:-uploads}
+
+x-ocr-env: &ocr-env
+  OCR_FALLBACK_ENABLED: ${OCR_FALLBACK_ENABLED:-true}
+  OCR_LANGUAGES: ${OCR_LANGUAGES:-eng+vie}
+  OCR_LANGUAGE_FALLBACK: ${OCR_LANGUAGE_FALLBACK:-eng}
+  OCR_RENDER_SCALE: ${OCR_RENDER_SCALE:-2.0}
+
+x-ai-env: &ai-env
+  AI_MODE: ${AI_MODE:-live}
+  AI_PROVIDER_LABEL: ${AI_PROVIDER_LABEL:-gemini}
+  AI_BASE_URL: ${AI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta/openai}
+  AI_API_KEY: ${AI_API_KEY:-}
+  AI_MODEL: ${AI_MODEL:-gemini-2.5-flash}
+  AI_FALLBACK_PROVIDER_LABEL: ${AI_FALLBACK_PROVIDER_LABEL:-gemini-fallback}
+  AI_FALLBACK_BASE_URL: ${AI_FALLBACK_BASE_URL:-}
+  AI_FALLBACK_API_KEY: ${AI_FALLBACK_API_KEY:-}
+  AI_FALLBACK_MODEL: ${AI_FALLBACK_MODEL:-gemini-2.5-flash-lite}
+  AI_REQUEST_TIMEOUT_SECONDS: ${AI_REQUEST_TIMEOUT_SECONDS:-45}
+
+x-internal-workflow-env: &internal-workflow-env
+  N8N_INTERNAL_SHARED_SECRET: ${N8N_INTERNAL_SHARED_SECRET:-change-me-internal-secret}
+
+x-n8n-trigger-env: &n8n-trigger-env
+  N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://n8n:5678/webhook/analyze-cv}
+  N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+  N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-change-me}
+  N8N_WEBHOOK_TIMEOUT_SECONDS: ${N8N_WEBHOOK_TIMEOUT_SECONDS:-60}
+  N8N_WEBHOOK_MAX_ATTEMPTS: ${N8N_WEBHOOK_MAX_ATTEMPTS:-2}
+  N8N_PROCESSING_CLAIM_TTL_SECONDS: ${N8N_PROCESSING_CLAIM_TTL_SECONDS:-900}
+
 services:
   db:
     image: postgres:16-alpine
@@ -21,15 +71,7 @@ services:
       context: ./backend
     container_name: resume-analyzer-backend
     environment:
-      BACKEND_PUBLIC_URL: ${BACKEND_PUBLIC_URL:-http://localhost:8000}
-      FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:5173}
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/resume_analyzer}
-      DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql+psycopg://postgres:postgres@db:5432/resume_analyzer}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
-      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:-change-me-session-secret}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
-      UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
-      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-10}
+      <<: [*runtime-env, *storage-env, *ocr-env, *ai-env, *internal-workflow-env, *n8n-trigger-env]
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
@@ -46,6 +88,71 @@ services:
     command: >
       sh -c "alembic upgrade head &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-exclude .venv --reload-exclude __pycache__"
+
+  file-worker:
+    build:
+      context: ./backend
+    container_name: resume-analyzer-file-worker
+    environment:
+      <<: [*runtime-env, *storage-env, *ocr-env, *internal-workflow-env]
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - backend_uploads:/app/uploads
+    command: >
+      sh -c "uvicorn app.file_worker_main:app --host 0.0.0.0 --port 8010 --reload --reload-exclude .venv --reload-exclude __pycache__"
+
+  ai-worker:
+    build:
+      context: ./backend
+    container_name: resume-analyzer-ai-worker
+    environment:
+      <<: [*runtime-env, *ai-env, *internal-workflow-env]
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: >
+      sh -c "uvicorn app.ai_worker_main:app --host 0.0.0.0 --port 8020 --reload --reload-exclude .venv --reload-exclude __pycache__"
+
+  persistence-worker:
+    build:
+      context: ./backend
+    container_name: resume-analyzer-persistence-worker
+    environment:
+      <<: [*runtime-env, *internal-workflow-env]
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: >
+      sh -c "uvicorn app.persistence_worker_main:app --host 0.0.0.0 --port 8030 --reload --reload-exclude .venv --reload-exclude __pycache__"
+
+  n8n:
+    image: n8nio/n8n:1.84.1
+    container_name: resume-analyzer-n8n
+    environment:
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      WEBHOOK_URL: ${N8N_PUBLIC_URL:-http://localhost:5678}
+      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE:-true}
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-change-me}
+      N8N_INTERNAL_SHARED_SECRET: ${N8N_INTERNAL_SHARED_SECRET:-change-me-internal-secret}
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - backend
+      - file-worker
+      - ai-worker
+      - persistence-worker
 
   frontend:
     build:
@@ -68,3 +175,4 @@ volumes:
   postgres_data:
   backend_uploads:
   frontend_node_modules:
+  n8n_data:

@@ -1,5 +1,8 @@
 import { Brain, Briefcase, History, Lightbulb } from "lucide-react";
 
+// Static marketing/demo content only.
+// Active CV upload, processing, history, and result flows now read from backend APIs.
+
 export const homeTrustPills = ["Free to use", "Instant results", "Secure & private"];
 
 export const featureCards = [
@@ -26,28 +29,6 @@ export const featureCards = [
     title: "History Tracking",
     description: "Track your resume improvements over time with detailed analysis history.",
     accent: "orange",
-  },
-];
-
-export const processingSteps = [
-  {
-    icon: "1",
-    title: "Extracting resume text",
-    description: "Reading and parsing your resume content",
-    state: "active",
-    badge: "Processing",
-  },
-  {
-    icon: "2",
-    title: "Analyzing skills",
-    description: "Identifying and evaluating your skills",
-    state: "pending",
-  },
-  {
-    icon: "3",
-    title: "Calculating job fit score",
-    description: "Generating comprehensive analysis",
-    state: "pending",
   },
 ];
 
