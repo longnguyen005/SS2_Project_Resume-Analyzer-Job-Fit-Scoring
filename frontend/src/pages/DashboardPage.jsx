@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, createSearchParams, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle, Clock3, FileText, Gauge, Upload } from "lucide-react";
 import HistoryRow from "../components/HistoryRow/HistoryRow";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -160,14 +160,6 @@ export default function DashboardPage() {
                 <Link className="nav-button secondary" to="/history">
                   View Full History
                 </Link>
-                {latestUpload && !isCompletedCvStatus(latestUpload.status) ? (
-                  <Link
-                    className="nav-button outline"
-                    to={`/processing?${createSearchParams({ cvId: latestUpload.id }).toString()}`}
-                  >
-                    Open Processing
-                  </Link>
-                ) : null}
               </div>
             ) : null}
           </section>
