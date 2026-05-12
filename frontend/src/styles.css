@@ -164,8 +164,8 @@ textarea {
 
 .nav-button.outline {
   background: transparent;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: var(--navy);
+  border: 1px solid var(--line-strong);
 }
 
 .nav-button.ghost {
@@ -539,6 +539,12 @@ textarea {
 }
 .cta-banner .nav-button {
   margin-top: 10px;
+}
+
+.cta-banner .nav-button.outline,
+.hero-section .nav-button.outline {
+  color: white;
+  border-color: rgba(255, 255, 255, 0.35);
 }
 .cta-banner h2,
 .cta-banner p {
