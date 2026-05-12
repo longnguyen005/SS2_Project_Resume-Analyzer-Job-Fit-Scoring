@@ -6,5 +6,6 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 5173,
+    allowedHosts: ["resumeai.id.vn", "api.resumeai.id.vn", "n8n.resumeai.id.vn"],
   },
 });
