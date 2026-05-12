@@ -39,12 +39,16 @@ graph TD
     FastAPI -->|"Verify JWT"| Auth
     FastAPI -->|"Upload file"| CF
     FastAPI -->|"Trigger webhook"| N8N
-    N8N -->|"Download file"| CF
-    N8N -->|"Extract text"| PDF
+    N8N -->|"Claim CV"| FastAPI
+    N8N -->|"Extract/validate HTTP call"| FileWorker["file-worker"]
+    FileWorker -->|"Read stored file"| CF
+    FileWorker -->|"Extract text"| PDF
     PDF -->|"If scanned"| OCR
-    N8N -->|"Send extracted text + JD"| AI
-    AI -->|"Return scores + suggestions"| N8N
-    N8N -->|"Save results"| DB
+    N8N -->|"Analyze HTTP call"| AIWorker["ai-worker"]
+    AIWorker -->|"Send extracted text + JD"| AI
+    AI -->|"Return scores + suggestions"| AIWorker
+    N8N -->|"Complete HTTP call"| PersistenceWorker["persistence-worker"]
+    PersistenceWorker -->|"Save result/status"| DB
     FastAPI -->|"Query results"| DB
     DB -->|"Return data"| FastAPI
     FastAPI -->|"Return scores + history"| User
@@ -56,7 +60,10 @@ graph TD
 |-----------|---------------|
 | **FastAPI Backend** | REST API, JWT authentication, file upload handling, webhook trigger to n8n, results querying, history endpoints |
 | **JWT Authentication** | User registration, login, token generation & verification, route protection |
-| **n8n Workflow** | Orchestrates the pipeline: receive webhook → extract text → call AI → parse response → save to DB |
+| **n8n Workflow** | Orchestrates the pipeline: receive webhook, claim work, call workers, and route terminal success/failure |
+| **file-worker** | Extracts PDF/DOCX text, runs OCR fallback, and validates resume text |
+| **ai-worker** | Calls the live AI provider and normalizes analysis payloads |
+| **persistence-worker** | Persists final analysis results and marks CV uploads completed |
 | **AI Provider** | Analyzes CV text, generates scores (0–100) with breakdown and improvement suggestions |
 | **PostgreSQL** | Persistent storage for users, CV metadata, job descriptions, extracted text, AI scores, and analysis history |
 | **Cloudflare R2** | Permanent cloud storage for uploaded CV files |
@@ -153,11 +160,14 @@ erDiagram
 ```
 
 ### Data Flow
-1. **Register/Login:** User registers or logs in → receives JWT token
-2. **Upload:** Authenticated user uploads file → file saved to Cloudflare R2 → metadata row inserted into `cv_upload` (status: `pending`)
-3. **Processing:** n8n downloads file from R2, extracts text → detects language → updates `cv_upload.extracted_text` and `cv_upload.language` → status: `processing`
-4. **AI Analysis:** n8n sends text + optional JD to AI → receives JSON response → inserts `analysis_result`, `category_score`, and `suggestion` rows → status: `completed`
-5. **Query:** FastAPI verifies JWT, reads from DB (filtered by user_id), joins tables, returns structured response
+1. **Register/Login:** User registers or logs in and receives a JWT token.
+2. **Upload:** Authenticated user uploads a PDF/DOCX file. The backend stores the file, inserts `cv_upload` metadata with status `pending`, and triggers n8n.
+3. **Claim:** n8n calls the backend internal claim endpoint. The backend owns status transitions and idempotency.
+4. **Extraction:** n8n calls `file-worker`, which loads the stored file, extracts text, applies OCR fallback when needed, validates resume content, and returns the extracted payload.
+5. **AI Analysis:** n8n calls `ai-worker`, which calls the live AI provider and normalizes the response into the internal workflow contract.
+6. **Persistence:** n8n calls `persistence-worker`, which saves the analysis result and marks the CV upload as `completed`.
+7. **Failure Handling:** any stage failure is routed through backend/internal fail handling so `failure_reason` and `failed_stage` stay consistent.
+8. **Query:** FastAPI verifies JWT, reads from DB filtered by `user_id`, and returns public read models for status, history, and result screens.
 
 ## API Design
 **How do components communicate?**
@@ -218,62 +228,65 @@ Response: 201 Created
 }
 ```
 
+#### `GET /api/v1/cv`
+List all CV uploads for the authenticated user.
+```
+Headers: Authorization: Bearer <token>
+
+Response: 200 OK
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "filename": "resume.pdf",
+      "status": "completed",
+      "analysis_summary": {
+        "overall_score": 78,
+        "grade": "Good",
+        "analysis_provider": "gemini"
+      }
+    }
+  ]
+}
+```
+
+#### `GET /api/v1/cv/{id}/status`
+Poll the processing status of one CV upload.
+```
+Headers: Authorization: Bearer <token>
+
+Response: 200 OK
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "status": "pending | processing | completed | failed",
+    "failure_reason": "string | null",
+    "failed_stage": "orchestration | extract | analyze | complete | null"
+  }
+}
+```
+
 #### `GET /api/v1/cv/{id}/result`
-Get analysis result for a specific CV (own CVs only).
+Get analysis result for a completed CV (own CVs only). Returns `409` when the result is not ready.
 ```
 Headers: Authorization: Bearer <token>
 
 Response: 200 OK
 {
-  "id": "uuid",
-  "cv_upload_id": "uuid",
-  "overall_score": 78,
-  "language": "vi",
-  "categories": [
-    { "category": "skills", "score": 85, "feedback": "..." },
-    { "category": "experience", "score": 72, "feedback": "..." },
-    { "category": "education", "score": 80, "feedback": "..." },
-    { "category": "format", "score": 75, "feedback": "..." }
-  ],
-  "suggestions": [
-    { "category": "skills", "priority": "high", "text": "..." },
-    { "category": "experience", "priority": "medium", "text": "..." }
-  ],
-  "job_description": { "id": "uuid", "title": "Backend Developer" },
-  "processing_time_seconds": 12.5,
-  "created_at": "2026-03-08T10:00:15Z"
-}
-```
-
-#### `GET /api/v1/cv/history`
-List all past analyses for the authenticated user.
-```
-Headers: Authorization: Bearer <token>
-Query params: page (int), page_size (int, default 20)
-
-Response: 200 OK
-{
-  "total": 45,
-  "page": 1,
-  "items": [
-    { "id": "uuid", "filename": "resume_v3.pdf", "overall_score": 78, "language": "en", "created_at": "..." },
-    ...
-  ]
-}
-```
-
-#### `GET /api/v1/cv/compare`
-Compare multiple CVs (own CVs only).
-```
-Headers: Authorization: Bearer <token>
-Query params: ids=uuid1,uuid2,uuid3
-
-Response: 200 OK
-{
-  "comparisons": [
-    { "id": "uuid1", "filename": "cv1.pdf", "overall_score": 78, "categories": [...] },
-    { "id": "uuid2", "filename": "cv2.pdf", "overall_score": 85, "categories": [...] }
-  ]
+  "success": true,
+  "data": {
+    "cv_id": "uuid",
+    "filename": "resume.pdf",
+    "overall_score": 78,
+    "grade": "Good",
+    "summary": "...",
+    "breakdown": [],
+    "strengths": [],
+    "improvements": [],
+    "suggestions": []
+  }
 }
 ```
 
@@ -316,18 +329,16 @@ Response: 200 OK
 #### `POST {N8N_WEBHOOK_URL}/webhook/analyze-cv`
 ```
 {
-  "cv_upload_id": "uuid",
-  "storage_key": "uploads/user-uuid/resume.pdf",
-  "file_type": "pdf",
-  "job_description_id": "uuid or null"
+  "cv_upload_id": "uuid"
 }
 ```
 
-### n8n → PostgreSQL
-n8n connects directly to PostgreSQL via built-in Postgres nodes to:
-- Update `cv_upload.extracted_text`, `cv_upload.language`, and `cv_upload.status`
-- Read `job_description.description_text` if `job_description_id` is provided
-- Insert `analysis_result`, `category_score`, and `suggestion` records
+### n8n -> Workers / Backend Internal APIs
+n8n does not own business logic or write analysis data directly. It calls:
+- backend internal `claim/fail` endpoints for state ownership
+- `file-worker` for extraction and validation
+- `ai-worker` for live AI analysis
+- `persistence-worker` for saving results
 
 ## Component Breakdown
 **What are the major building blocks?**
@@ -335,25 +346,35 @@ n8n connects directly to PostgreSQL via built-in Postgres nodes to:
 ### Backend (FastAPI)
 - `app/main.py` — Application entry point, CORS, lifespan events
 - `app/api/routes/auth.py` — Register, login endpoints
-- `app/api/routes/cv.py` — CV upload, result, history, compare endpoints
+- `app/api/routes/cv.py` — CV upload, list, status, and result endpoints
 - `app/api/routes/jd.py` — Job description CRUD endpoints
 - `app/api/deps.py` — JWT dependency injection (get_current_user)
 - `app/models/` — SQLAlchemy ORM models (user, cv_upload, job_description, analysis_result, etc.)
-- `app/schemas/` — Pydantic request/response schemas
-- `app/services/cv_service.py` — Business logic (file saving, webhook trigger, result assembly)
-- `app/services/auth_service.py` — Password hashing, JWT creation & verification
-- `app/services/storage_service.py` — Cloudflare R2 upload/download operations
+- `app/schemas/cv_public.py` — User-facing CV response/read schemas
+- `app/schemas/cv_internal.py` — Internal n8n/worker payload schemas
+- `app/services/cv_queries.py` — CV/JD ownership and read/query helpers
+- `app/services/cv_state.py` — CV upload creation and processing state transitions
+- `app/services/cv_extraction.py` — Resume text extraction and validation stage logic
+- `app/services/cv_analysis.py` — AI analysis service adapter
+- `app/services/cv_persistence.py` — Analysis persistence and CV read-model builders
+- `app/services/resume_parser.py` — File-to-text parser for PDF/DOCX plus OCR fallback
+- `app/services/resume_validation.py` — Deterministic resume-text validator used after extraction
+- `app/services/resume_analyzer.py` — Live AI provider orchestration only
+- `app/services/ai_response_normalizer.py` — Pure response parsing, scoring, and normalization logic
+- `app/services/legacy/mock_analyzer.py` — Legacy deterministic fixture, excluded from runtime pipeline
+- `app/services/workflow_trigger.py` — n8n webhook trigger and orchestration failure sync
+- `app/services/storage.py` — Local upload validation and optional Cloudflare R2 object upload
 - `app/core/config.py` — Environment config (DB URL, n8n URL, AI keys, R2 credentials, JWT secret)
 - `app/core/security.py` — JWT token utilities, password hashing
 - `app/db/` — Database session, migrations (Alembic)
 
 ### n8n Workflow
-- **Webhook Trigger Node** — Receives POST from FastAPI with CV metadata
-- **Read File Node** — Reads uploaded file from shared volume
-- **Code Node (Text Extraction)** — Runs PyMuPDF/python-docx to extract text
-- **HTTP Request Node (AI Call)** — Sends text + prompt to OpenAI/Gemini API
-- **Code Node (Parse Response)** — Parses AI JSON response into structured data
-- **Postgres Nodes** — INSERT/UPDATE results into database
+- **Webhook Trigger Node** — Receives POST from FastAPI with `cv_upload_id`
+- **Claim HTTP Node** — Calls backend internal claim API
+- **File Worker HTTP Node** — Calls `file-worker` for extract/validate
+- **AI Worker HTTP Node** — Calls `ai-worker` for live provider analysis
+- **Persistence Worker HTTP Node** — Calls `persistence-worker` to save final results
+- **Failure HTTP Node** — Calls backend internal fail API with `failed_stage` and `failure_reason`
 
 ### Database (PostgreSQL)
 - 6 tables: `user`, `job_description`, `cv_upload`, `analysis_result`, `category_score`, `suggestion`
@@ -361,7 +382,10 @@ n8n connects directly to PostgreSQL via built-in Postgres nodes to:
 - JSONB column for raw AI response (flexibility for schema evolution)
 
 ### Docker Compose Services
-- `backend` — FastAPI app (port 8000)
+- `backend` — FastAPI public/internal API app (port 8000)
+- `file-worker` — extraction/validation worker (internal Docker network)
+- `ai-worker` — live AI analysis worker (internal Docker network)
+- `persistence-worker` — result persistence worker (internal Docker network)
 - `db` — PostgreSQL 16 (port 5432)
 - `n8n` — n8n workflow engine (port 5678)
 - n8n data persistence volume

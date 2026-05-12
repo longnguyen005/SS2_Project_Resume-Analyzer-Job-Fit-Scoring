@@ -124,7 +124,7 @@ class PersistenceWorkerIntegrationTests(IsolatedAsyncioTestCase):
         with (
             patch.object(
                 persistence_worker,
-                "save_analysis_result",
+                "complete_analysis_result",
                 new=AsyncMock(side_effect=RuntimeError("database write failed")),
             ),
             self.assertLogs("app.persistence_worker.routes", level="INFO") as captured_logs,

@@ -6,15 +6,32 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import CvUpload
+from app.services.cv_queries import load_cv_with_job_description
 from app.services.cv_state import (
     FAILED_STAGE_EXTRACT,
-    load_cv_with_job_description,
     mark_cv_failed,
     reset_cv_processing_state,
     utc_now,
 )
 from app.services.resume_parser import ResumeParseError, extract_text_from_resume
 from app.services.resume_validation import validate_resume_text
+
+
+def build_resume_stage_response(
+    cv_upload: CvUpload,
+    extracted_text: str,
+    *,
+    response_model,
+):
+    return response_model(
+        cv_upload_id=cv_upload.id,
+        filename=cv_upload.filename,
+        file_type=cv_upload.file_type,
+        storage_key=cv_upload.storage_key,
+        storage_url=cv_upload.storage_url,
+        resume_text=extracted_text,
+        job_description_text=cv_upload.job_description.description_text if cv_upload.job_description else None,
+    )
 
 
 async def extract_cv_text(db: AsyncSession, cv_upload_id: UUID) -> tuple[CvUpload, str]:

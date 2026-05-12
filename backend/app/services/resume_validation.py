@@ -1,3 +1,10 @@
+"""Resume text validation boundary for the extraction stage.
+
+This module applies deterministic heuristics to extracted text and returns a
+small validation result. It intentionally has no file I/O, database access, or
+AI calls.
+"""
+
 from __future__ import annotations
 
 import re
@@ -46,7 +53,11 @@ def validate_resume_text(resume_text: str) -> ResumeValidationResult:
     )
 
     date_hits = len(re.findall(r"\b(19|20)\d{2}\b", normalized_text))
-    bullet_hits = normalized_text.count("\n-") + normalized_text.count("\n•") + normalized_text.count("\n*")
+    bullet_hits = (
+        normalized_text.count("\n-")
+        + normalized_text.count("\n*")
+        + normalized_text.count("\n\u2022")
+    )
 
     looks_like_resume = (
         (section_hits >= 2 and contact_hits >= 1)

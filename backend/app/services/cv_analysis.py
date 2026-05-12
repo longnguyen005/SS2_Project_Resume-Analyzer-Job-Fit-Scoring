@@ -1,21 +1,35 @@
+"""AI analysis stage adapter used by the ai-worker route.
+
+This service measures the live provider call and serializes the normalized
+payload for the internal workflow contract. Mock/legacy analysis is intentionally
+not part of this runtime adapter.
+"""
+
 from __future__ import annotations
 
 from time import perf_counter
+from typing import NamedTuple
 
 from app.services.ai_response_normalizer import ResumeAnalysisPayload
 from app.services.resume_analyzer import analyze_resume
 
 
+class AnalyzeResumeResult(NamedTuple):
+    analysis_payload: ResumeAnalysisPayload
+    provider_name: str
+    processing_time_seconds: float
+
+
 async def analyze_resume_payload(
     resume_text: str,
     job_description_text: str | None,
-) -> tuple[ResumeAnalysisPayload, str, float]:
+) -> AnalyzeResumeResult:
     started_at = perf_counter()
     payload, provider_name = await analyze_resume(
         resume_text=resume_text,
         job_description_text=job_description_text,
     )
-    return payload, provider_name, round(perf_counter() - started_at, 2)
+    return AnalyzeResumeResult(payload, provider_name, round(perf_counter() - started_at, 2))
 
 
 def serialize_analysis_payload(analysis_payload: ResumeAnalysisPayload) -> dict:

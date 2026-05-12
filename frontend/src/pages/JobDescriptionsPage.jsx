@@ -193,13 +193,21 @@ export default function JobDescriptionsPage() {
               <h2>Saved Job Descriptions</h2>
               <div className="jd-list">
                 {isLoading ? <p className="page-feedback">Loading data ...</p> : null}
+                {!isLoading && messageType === "error" && message ? (
+                  <div className="empty-state">
+                    <strong>{message}</strong>
+                    <button type="button" className="nav-button secondary" onClick={loadJobDescriptions}>
+                      Retry
+                    </button>
+                  </div>
+                ) : null}
                 {!isLoading && !message && jobDescriptions.length === 0 ? (
                   <div className="empty-state">
                     <strong>There is no job description yet.</strong>
                     <p>Let's create the first Job Description</p>
                   </div>
                 ) : null}
-                {jobDescriptions.map((item) => (
+                {!message || messageType !== "error" ? jobDescriptions.map((item) => (
                   <article key={item.id} className="jd-item">
                     <div className="panel-header">
                       <strong>{item.title}</strong>
@@ -225,7 +233,7 @@ export default function JobDescriptionsPage() {
                       </button>
                     </div>
                   </article>
-                ))}
+                )) : null}
               </div>
             </section>
           </div>

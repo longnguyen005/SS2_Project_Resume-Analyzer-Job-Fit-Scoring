@@ -5,6 +5,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import RouteErrorBoundary from "./components/RouteErrorBoundary";
 
 const HistoryPage = lazy(() => import("./pages/HistoryPage"));
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
 const JobDescriptionsPage = lazy(() => import("./pages/JobDescriptionsPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -21,6 +22,14 @@ export default function App() {
       <Suspense fallback={<LoadingSpinner fullScreen label="Loading page..." />}>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/oauth/callback" element={<OAuthCallbackPage />} />

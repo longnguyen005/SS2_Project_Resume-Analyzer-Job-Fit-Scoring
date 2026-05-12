@@ -1,3 +1,10 @@
+"""Live AI provider orchestration for resume analysis.
+
+Runtime analysis goes through configured live providers only. Deterministic
+mock output is isolated under app.services.legacy and must not be imported from
+this module or worker routes.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -169,9 +176,6 @@ async def _post_with_retries(
 
 
 def _get_live_ai_providers() -> list[LiveAIProvider]:
-    if settings.ai_mode.lower() != "live":
-        return []
-
     providers: list[LiveAIProvider] = []
     primary_provider = _get_primary_live_ai_provider()
     if primary_provider is not None:

@@ -17,6 +17,10 @@ def upgrade() -> None:
         "ON cv_uploads (user_id, created_at)"
     )
     op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_cv_uploads_status_updated_at "
+        "ON cv_uploads (status, updated_at)"
+    )
+    op.execute(
         "CREATE INDEX IF NOT EXISTS ix_analysis_results_cv_upload_id "
         "ON analysis_results (cv_upload_id)"
     )
@@ -29,4 +33,5 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute("DROP INDEX IF EXISTS ix_job_descriptions_user_id")
     op.execute("DROP INDEX IF EXISTS ix_analysis_results_cv_upload_id")
+    op.execute("DROP INDEX IF EXISTS ix_cv_uploads_status_updated_at")
     op.execute("DROP INDEX IF EXISTS ix_cv_uploads_user_id_created_at")

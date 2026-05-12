@@ -1,9 +1,12 @@
 x-runtime-env: &runtime-env
+  APP_NAME: ${APP_NAME:-Resume Analyzer API}
+  API_V1_PREFIX: ${API_V1_PREFIX:-/api/v1}
   BACKEND_PUBLIC_URL: ${BACKEND_PUBLIC_URL:-http://localhost:8000}
   FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:5173}
   DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/resume_analyzer}
   DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql+psycopg://postgres:postgres@db:5432/resume_analyzer}
   JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+  JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
   SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:-change-me-session-secret}
   ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
 
@@ -26,7 +29,6 @@ x-ocr-env: &ocr-env
   OCR_RENDER_SCALE: ${OCR_RENDER_SCALE:-2.0}
 
 x-ai-env: &ai-env
-  AI_MODE: ${AI_MODE:-live}
   AI_PROVIDER_LABEL: ${AI_PROVIDER_LABEL:-gemini}
   AI_BASE_URL: ${AI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta/openai}
   AI_API_KEY: ${AI_API_KEY:-}

@@ -1,3 +1,9 @@
+"""File worker application entrypoint.
+
+This internal app exposes only resume extraction and validation primitives for
+the n8n workflow.
+"""
+
 from __future__ import annotations
 
 from fastapi import APIRouter

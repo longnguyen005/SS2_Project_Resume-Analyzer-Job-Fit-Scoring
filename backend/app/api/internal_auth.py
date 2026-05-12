@@ -1,3 +1,5 @@
+"""Shared guard for internal workflow and worker routes."""
+
 from __future__ import annotations
 
 from fastapi import Header, HTTPException, status

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy import ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,6 +12,11 @@ from app.models.mixins import UUIDTimestampMixin
 
 class CvUpload(UUIDTimestampMixin, Base):
     __tablename__ = "cv_uploads"
+    __table_args__ = (
+        Index("ix_cv_uploads_user_id", "user_id"),
+        Index("ix_cv_uploads_user_id_created_at", "user_id", "created_at"),
+        Index("ix_cv_uploads_status_updated_at", "status", "updated_at"),
+    )
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
     job_description_id: Mapped[uuid.UUID | None] = mapped_column(

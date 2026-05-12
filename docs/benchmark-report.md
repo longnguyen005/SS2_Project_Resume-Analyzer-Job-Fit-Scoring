@@ -151,6 +151,7 @@ After applying migration `0005_performance_indexes`:
 | Query | Before Index | After Index | Improvement |
 |-------|-------------|-------------|-------------|
 | CV history (user_id + created_at) | _ms_ | _ms_ | _% |
+| Stuck job recovery (status + updated_at) | _ms_ | _ms_ | _% |
 | Analysis result by cv_upload_id | _ms_ | _ms_ | _% |
 | JD listing by user_id | _ms_ | _ms_ | _% |
 

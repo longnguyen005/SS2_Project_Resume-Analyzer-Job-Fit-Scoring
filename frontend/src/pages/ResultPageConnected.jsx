@@ -7,12 +7,14 @@ import TopNav from "../components/TopNav/TopNav";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
 import { formatAnalysisProviderLabel, formatCvDateTime, normalizeResultData } from "../lib/cvReadModels";
+import { CV_STATUSES, isPendingCvStatus, isProcessingCvStatus } from "../lib/cvStatusModel";
 
 export default function ResultPageConnected() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { logout } = useAuth();
   const [result, setResult] = useState(null);
+  const [resultStatus, setResultStatus] = useState(CV_STATUSES.COMPLETED);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const cvId = searchParams.get("cvId");
@@ -21,6 +23,7 @@ export default function ResultPageConnected() {
     if (!cvId) {
       setIsLoading(false);
       setResult(null);
+      setResultStatus(CV_STATUSES.PENDING);
       setMessage("No CV result was selected. Please upload a resume first.");
       return;
     }
@@ -35,6 +38,7 @@ export default function ResultPageConnected() {
     try {
       const data = await apiRequest(`/cv/${cvId}/result`);
       setResult(normalizeResultData(data));
+      setResultStatus(CV_STATUSES.COMPLETED);
     } catch (error) {
       if (error.status === 401) {
         logout();
@@ -44,9 +48,11 @@ export default function ResultPageConnected() {
 
       if (error.status === 409) {
         setResult(null);
+        setResultStatus(CV_STATUSES.PROCESSING);
         setMessage(error.message || "The analysis is not completed yet. Please return to the processing page and wait a little longer.");
       } else {
         setResult(null);
+        setResultStatus(CV_STATUSES.FAILED);
         setMessage(error.message || "Unable to load CV result.");
       }
     } finally {
@@ -60,6 +66,15 @@ export default function ResultPageConnected() {
     }
     return createSearchParams({ cvId }).toString();
   }, [cvId]);
+
+  const processingSearch = useMemo(() => {
+    if (!cvId) {
+      return "";
+    }
+    return createSearchParams({ cvId }).toString();
+  }, [cvId]);
+
+  const canReturnToProcessing = Boolean(cvId) && (isPendingCvStatus(resultStatus) || isProcessingCvStatus(resultStatus));
 
   const ringStyle = useMemo(() => {
     const score = result?.overall_score ?? 0;
@@ -90,10 +105,15 @@ export default function ResultPageConnected() {
               <div className="empty-state">
                 <strong>{message}</strong>
                 <div className="hero-actions">
+                  {canReturnToProcessing ? (
+                    <Link className="nav-button primary" to={`/processing?${processingSearch}`}>
+                      Back to Processing
+                    </Link>
+                  ) : null}
                   <button type="button" className="nav-button secondary" onClick={loadResult}>
                     Retry Loading Result
                   </button>
-                  <Link className="nav-button primary" to="/upload">
+                  <Link className={canReturnToProcessing ? "nav-button outline" : "nav-button primary"} to="/upload">
                     Upload Another Resume
                   </Link>
                 </div>
@@ -224,6 +244,11 @@ export default function ResultPageConnected() {
               <div className="empty-state">
                 <strong>No result data is available for this CV yet.</strong>
                 <p>Please upload again or return from the processing flow.</p>
+                {cvId ? (
+                  <Link className="nav-button primary" to={`/processing?${processingSearch}`}>
+                    Back to Processing
+                  </Link>
+                ) : null}
               </div>
             </section>
           ) : null}

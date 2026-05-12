@@ -1,8 +1,14 @@
+"""AI worker application entrypoint.
+
+This internal app exposes only the resume analysis primitive for the n8n
+workflow.
+"""
+
 from __future__ import annotations
 
-from app.ai_worker.routes import router as ai_worker_router
 from fastapi import APIRouter
 
+from app.ai_worker.routes import router as ai_worker_router
 from app.core.app_factory import create_application
 from app.core.config import settings
 

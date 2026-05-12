@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models import CvUpload
-from app.services.cv_state import FAILED_STAGE_ORCHESTRATION, load_cv_with_job_description, mark_cv_failed
+from app.services.cv_queries import load_cv_with_job_description
+from app.services.cv_state import FAILED_STAGE_ORCHESTRATION, mark_cv_failed
 
 logger = logging.getLogger(__name__)
 

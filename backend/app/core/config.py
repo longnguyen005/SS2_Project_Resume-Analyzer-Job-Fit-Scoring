@@ -49,7 +49,6 @@ class Settings(BaseSettings):
     ocr_language_fallback: str = "eng"
     ocr_render_scale: float = 2.0
     cors_origins: str = "http://localhost:5173"
-    ai_mode: str = "live"
     ai_provider_label: str = "gemini"
     ai_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
     ai_api_key: str = ""

@@ -11,17 +11,20 @@ from app.core.config import settings
 from app.db.session import async_session_factory
 from app.models import User
 from app.schemas.common import APIResponse
-from app.schemas.cv import CvHistoryItemRead, CvResultRead, CvStatusRead, CvUploadRead
-from app.services.cv_persistence import build_cv_history_reads, build_cv_result_read
-from app.services.cv_state import (
-    create_cv_upload_record,
+from app.schemas.cv_public import CvHistoryItemRead, CvResultRead, CvStatusRead, CvUploadRead
+from app.services.cv_persistence import (
+    build_cv_history_reads,
+    build_cv_result_read,
+    build_cv_status_read,
+    build_cv_upload_read,
+)
+from app.services.cv_queries import (
     ensure_job_description_owned_by_user,
     get_latest_analysis_result,
     get_user_cv_upload,
     list_user_cv_uploads,
-    serialize_cv_status,
-    serialize_cv_upload,
 )
+from app.services.cv_state import create_cv_upload_record
 from app.services.storage import StorageServiceError, save_upload
 from app.services.workflow_trigger import trigger_cv_analysis_workflow_by_id
 
@@ -77,7 +80,7 @@ async def upload_cv(
 
     return APIResponse(
         message="CV uploaded successfully. Analysis has started in the background.",
-        data=serialize_cv_upload(cv_upload),
+        data=build_cv_upload_read(cv_upload),
     )
 
 
@@ -99,7 +102,7 @@ async def get_cv_upload(
     cv_upload = await get_user_cv_upload(db, cv_id, current_user.id)
     if cv_upload is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CV upload not found")
-    return APIResponse(message="CV upload retrieved successfully.", data=serialize_cv_upload(cv_upload))
+    return APIResponse(message="CV upload retrieved successfully.", data=build_cv_upload_read(cv_upload))
 
 
 @router.get("/{cv_id}/status", response_model=APIResponse[CvStatusRead])
@@ -114,7 +117,7 @@ async def get_cv_status(
 
     return APIResponse(
         message="CV status retrieved successfully.",
-        data=serialize_cv_status(cv_upload),
+        data=build_cv_status_read(cv_upload),
     )
 
 

@@ -55,7 +55,7 @@ Du an duoc to chuc theo huong tach biet ro cac thanh phan:
 - Pipeline `n8n` staged cho `extract -> validate -> analyze -> complete/fail`
 - Dong bo `status`, `failure_reason`, `failed_stage` tu pipeline ve database
 - Workflow export chinh cua repo la `n8n/workflows/cv-analysis-http-pipeline-staged.json`
-- Workflow skeleton chi dung de smoke-test webhook va khong phai source of truth cho production-like flow
+- Cac export workflow tam/skeleton khong nam trong runtime contract va khong duoc commit
 
 ## 4. Kien truc tong the
 
@@ -123,7 +123,7 @@ Luong chinh hien tai:
 |   |   |-- core/         # config, security, oauth
 |   |   |-- db/           # session, base
 |   |   |-- models/       # SQLAlchemy models
-|   |   |-- schemas/      # Pydantic schemas
+|   |   |-- schemas/      # public API schemas + internal workflow payload schemas
 |   |   |-- file_worker/  # extract / validate worker app
 |   |   |-- ai_worker/    # analyze worker app
 |   |   |-- persistence_worker/ # complete / save DB worker app
@@ -136,7 +136,7 @@ Luong chinh hien tai:
 |   |-- src/
 |   |   |-- components/
 |   |   |-- context/
-|   |   |-- lib/
+|   |   |-- lib/         # API client, status model, polling hook, read models
 |   |   `-- pages/
 |   |-- Dockerfile
 |   `-- package.json
@@ -148,6 +148,13 @@ Luong chinh hien tai:
 |-- .env.example
 `-- README.md
 ```
+
+Frontend runtime notes:
+
+- `/dashboard`, `/history`, `/processing`, and `/result` use backend data; legacy mock upload/result UI has been removed.
+- CV status handling is centralized in `frontend/src/lib/cvStatusModel.js`.
+- Processing status polling is centralized in `frontend/src/lib/useCvStatusPolling.js`.
+- `frontend/src/lib/mockData.js` is limited to static HomePage marketing content.
 
 ## 7. Mo hinh du lieu chinh
 
@@ -200,9 +207,12 @@ Copy-Item .env.example .env
 
 #### Backend
 
+- `APP_NAME`
+- `API_V1_PREFIX`
 - `BACKEND_PUBLIC_URL`
 - `FRONTEND_PUBLIC_URL`
 - `JWT_SECRET_KEY`
+- `JWT_ALGORITHM`
 - `SESSION_SECRET_KEY`
 - `ACCESS_TOKEN_EXPIRE_MINUTES`
 - `CORS_ORIGINS`
@@ -218,7 +228,6 @@ Copy-Item .env.example .env
 
 #### AI Provider
 
-- `AI_MODE`
 - `AI_PROVIDER_LABEL`
 - `AI_BASE_URL`
 - `AI_API_KEY`
@@ -250,14 +259,22 @@ Copy-Item .env.example .env
 - `N8N_WEBHOOK_MAX_ATTEMPTS`
 - `N8N_PROCESSING_CLAIM_TTL_SECONDS`
 
+#### n8n container
+
+- `N8N_PUBLIC_URL`
+- `N8N_HOST`
+- `N8N_PROTOCOL`
+- `N8N_BASIC_AUTH_ACTIVE`
+
 Luu y:
 
 - Runtime contract mac dinh hien tai la `backend -> n8n -> file-worker -> ai-worker -> persistence-worker`.
+- `API_V1_PREFIX` phai khop voi `VITE_API_BASE_URL` va cac URL worker trong workflow n8n.
 - `N8N_WEBHOOK_TIMEOUT_SECONDS=60` duoc chon cho workerized staged pipeline; neu giam xuong qua thap, webhook co the fail som truoc khi workflow ket thuc.
 - `R2_ENABLED=false` trong contract mac dinh. Chi bat `true` khi da cau hinh day du `R2_ENDPOINT_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`.
 - Import workflow `n8n/workflows/cv-analysis-http-pipeline-staged.json` vao n8n va activate sau khi import.
 - File JSON export trong repo duoc giu `active: false` de tranh commit trang thai runtime cua moi truong local.
-- `n8n/workflows/cv-analysis-skeleton.json` chi con dung cho webhook smoke-test lich su, khong nam trong active runtime contract.
+- Chi `n8n/workflows/cv-analysis-http-pipeline-staged.json` la workflow source of truth. Khong commit export tam hoac local n8n database.
 
 ### Luu y
 

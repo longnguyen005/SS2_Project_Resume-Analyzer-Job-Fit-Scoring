@@ -1,8 +1,7 @@
-"""Deterministic mock resume analysis for development and testing.
+"""Legacy deterministic mock resume analysis for old demos/tests only.
 
-Extracted from resume_analyzer.py to isolate test/dev concerns from
-production AI orchestration (SRP). Easy to locate and remove when
-mock mode is deprecated.
+The production pipeline does not import this module. Runtime AI analysis must
+go through app.services.resume_analyzer and configured live providers.
 """
 
 from __future__ import annotations

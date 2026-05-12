@@ -7,6 +7,7 @@ import TopNav from "../components/TopNav/TopNav";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
 import { buildHistoryRowViewModel, calculateAverageScore, formatCvDate } from "../lib/cvReadModels";
+import { isCompletedCvStatus } from "../lib/cvStatusModel";
 
 export default function HistoryPage() {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ export default function HistoryPage() {
     setMessage(error.message || fallbackMessage);
   }
 
-  const completedUploads = uploads.filter((item) => item.status === "completed");
+  const completedUploads = uploads.filter((item) => isCompletedCvStatus(item.status));
   const latestCompletedUpload = completedUploads[0] || null;
   const metrics = [
     {

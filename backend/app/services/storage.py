@@ -1,3 +1,10 @@
+"""Canonical CV upload storage service.
+
+This module validates uploaded files, writes the local copy used by the parser,
+and optionally mirrors the object to Cloudflare R2. Routes and state services
+should import storage primitives from here.
+"""
+
 from __future__ import annotations
 
 import asyncio

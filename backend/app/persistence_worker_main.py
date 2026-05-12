@@ -1,3 +1,8 @@
+"""Persistence worker application entrypoint.
+
+This internal app exposes only the complete/save primitive for the n8n workflow.
+"""
+
 from __future__ import annotations
 
 from fastapi import APIRouter

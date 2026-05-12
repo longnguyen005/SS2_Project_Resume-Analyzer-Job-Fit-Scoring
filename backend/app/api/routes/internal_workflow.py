@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
 from app.api.internal_auth import verify_internal_workflow_access
-from app.schemas.cv import InternalCvClaimResponse, InternalCvFailRequest
+from app.schemas.cv_internal import InternalCvClaimResponse, InternalCvFailRequest
 from app.services.cv_state import claim_cv_processing, mark_cv_failed
 
 router = APIRouter()
@@ -66,4 +66,3 @@ async def fail_cv(
     )
     await mark_cv_failed(db, cv_id, payload.failure_reason, failed_stage=payload.failed_stage)
     return {"status": "failed"}
-

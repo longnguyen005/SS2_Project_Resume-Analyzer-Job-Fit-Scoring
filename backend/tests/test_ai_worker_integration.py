@@ -13,6 +13,7 @@ from app.ai_worker.routes import router as ai_worker_router
 from app.core.config import settings
 from app.db.session import async_session_factory, engine
 from app.models import JobDescription, User
+from app.services.cv_analysis import AnalyzeResumeResult
 from app.services.resume_analyzer import (
     BreakdownItem,
     ChartBarItem,
@@ -78,7 +79,7 @@ class AIWorkerIntegrationTests(IsolatedAsyncioTestCase):
         assert self.client is not None
         headers = {"x-internal-workflow-secret": settings.n8n_internal_shared_secret}
 
-        analyze_result = (
+        analyze_result = AnalyzeResumeResult(
             ResumeAnalysisPayload(
                 overall_score=84,
                 grade="Very Good",
@@ -108,8 +109,8 @@ class AIWorkerIntegrationTests(IsolatedAsyncioTestCase):
                     )
                 ],
             ),
-            "integration-test-provider",
-            1.23,
+            provider_name="integration-test-provider",
+            processing_time_seconds=1.23,
         )
 
         with (

@@ -2,6 +2,8 @@
 
 Extracted from resume_analyzer.py to follow Single Responsibility Principle.
 This module contains NO I/O — only data transformation.
+It is shared by live AI analysis, persistence read-model builders, and legacy
+test fixtures.
 """
 
 from __future__ import annotations

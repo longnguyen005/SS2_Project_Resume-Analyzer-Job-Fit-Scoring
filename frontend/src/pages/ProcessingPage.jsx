@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Link, createSearchParams, useNavigate, useSearchParams } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo/BrandLogo";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ProgressStep from "../components/ProgressStep/ProgressStep";
-import { apiRequest } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import {
   buildProcessingStepViews,
@@ -12,86 +11,56 @@ import {
   getProcessingStatusCopy,
   shouldShowProcessingLoadingState,
 } from "../lib/cvProcessingViewModel";
+import { isCompletedCvStatus, isFailedCvStatus } from "../lib/cvStatusModel";
+import { useCvStatusPolling } from "../lib/useCvStatusPolling";
 
 export default function ProcessingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { logout } = useAuth();
-  const [backendStatus, setBackendStatus] = useState("pending");
-  const [failureReason, setFailureReason] = useState("");
-  const [failedStage, setFailedStage] = useState("");
-  const [message, setMessage] = useState("");
-  const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const cvId = searchParams.get("cvId");
   const hasRedirectedRef = useRef(false);
+  const handleUnauthorized = useCallback(() => {
+    logout();
+    navigate("/login", { replace: true });
+  }, [logout, navigate]);
+  const statusState = useCvStatusPolling(cvId, {
+    enabled: Boolean(cvId),
+    onUnauthorized: handleUnauthorized,
+  });
+  const backendStatus = statusState.status;
+  const failureReason = statusState.failureReason;
+  const failedStage = statusState.failedStage;
 
   useEffect(() => {
     if (!cvId) {
-      setMessage("No uploaded CV was found. Please return to upload and try again.");
-      setIsLoadingStatus(false);
-      return undefined;
+      return;
     }
 
-    let isMounted = true;
-    let pollingTimer = null;
-
-    async function loadStatus() {
-      try {
-        const data = await apiRequest(`/cv/${cvId}/status`);
-        if (!isMounted) {
-          return;
-        }
-
-        setBackendStatus(data.status);
-        setFailureReason(data.failure_reason || "");
-        setFailedStage(data.failed_stage || "");
-        setIsLoadingStatus(false);
-        setMessage("");
-
-        if (data.status === "completed") {
-          if (!hasRedirectedRef.current) {
-            hasRedirectedRef.current = true;
-            window.setTimeout(() => {
-              navigate({
-                pathname: "/result",
-                search: createSearchParams({ cvId }).toString(),
-              });
-            }, 900);
-          }
-          return;
-        }
-
-        if (data.status === "failed") {
-          setMessage(data.failure_reason || "Resume processing failed. Please upload the file again or try another CV.");
-          return;
-        }
-
-        pollingTimer = window.setTimeout(loadStatus, 1500);
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        setIsLoadingStatus(false);
-        if (error.status === 401) {
-          logout();
-          navigate("/login", { replace: true });
-          return;
-        }
-
-        setMessage(error.message || "Unable to retrieve the current analysis status.");
-      }
+    if (!isCompletedCvStatus(backendStatus) || hasRedirectedRef.current) {
+      return;
     }
 
-    loadStatus();
+    hasRedirectedRef.current = true;
+    const redirectTimer = window.setTimeout(() => {
+      navigate({
+        pathname: "/result",
+        search: createSearchParams({ cvId }).toString(),
+      });
+    }, 900);
 
-    return () => {
-      isMounted = false;
-      if (pollingTimer) {
-        window.clearTimeout(pollingTimer);
-      }
-    };
-  }, [cvId, logout, navigate]);
+    return () => window.clearTimeout(redirectTimer);
+  }, [backendStatus, cvId, navigate]);
+
+  const message = useMemo(() => {
+    if (!cvId) {
+      return "No uploaded CV was found. Please return to upload and try again.";
+    }
+    if (isFailedCvStatus(backendStatus)) {
+      return failureReason || "Resume processing failed. Please upload the file again or try another CV.";
+    }
+    return statusState.message;
+  }, [backendStatus, cvId, failureReason, statusState.message]);
 
   const progress = useMemo(() => {
     return getProcessingProgress(backendStatus, failedStage);
@@ -105,7 +74,7 @@ export default function ProcessingPage() {
     return getProcessingLoadingLabel(backendStatus);
   }, [backendStatus]);
 
-  const showLoadingState = shouldShowProcessingLoadingState(isLoadingStatus, backendStatus);
+  const showLoadingState = shouldShowProcessingLoadingState(statusState.isLoading, backendStatus);
 
   const stepViews = useMemo(
     () => buildProcessingStepViews(backendStatus, failedStage),
@@ -141,7 +110,7 @@ export default function ProcessingPage() {
           </div>
           <div className="processing-note">This usually takes 10-15 seconds. Please don't close this window.</div>
           {message ? <p className="page-feedback error">{message}</p> : null}
-          {backendStatus === "failed" ? (
+          {isFailedCvStatus(backendStatus) ? (
             <div className="hero-actions center-actions" style={{ marginTop: "1rem" }}>
               <Link className="nav-button primary" to="/upload">Upload Again</Link>
               <Link className="nav-button outline" to="/history">View History</Link>

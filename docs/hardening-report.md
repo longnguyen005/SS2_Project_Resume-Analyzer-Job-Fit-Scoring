@@ -38,13 +38,13 @@ This report documents all reliability, observability, and stability improvements
 | `cv.py` (routes) | `cv_upload_created` with cv_id, user_id, filename, file_type, size, jd_id |
 | `workflow_trigger.py` | `n8n_webhook_trigger_attempt`, `n8n_webhook_trigger_success`, `n8n_webhook_trigger_failure` |
 | `cv_state.py` | `cv_claimed`, `cv_claim_skip` (already_processing/completed), `cv_claim_expired`, `cv_marked_failed` |
-| `storage_service.py` | `r2_upload_success`, `r2_upload_failure`, `r2_not_configured` |
+| `storage.py` | `r2_upload_success`, `r2_upload_failure`, `r2_not_configured` |
 | `resume_analyzer.py` | `ai_analysis_start`, `ai_analysis_success`, `ai_analysis_failure`, `ai_token_usage`, `scoring_drift_detected` |
 | `main.py` | `stuck_jobs_recovered`, `stuck_job_recovery_error` |
 
 **Log format**: `event=<name> cv_upload_id=<id> key=value key=value`
 
-**Files modified**: `cv_state.py`, `storage_service.py`, `resume_analyzer.py`, `cv.py`, `main.py`
+**Files modified**: `cv_state.py`, `storage.py`, `resume_analyzer.py`, `cv.py`, `main.py`
 
 ---
 
@@ -95,6 +95,7 @@ This report documents all reliability, observability, and stability improvements
 **Created**: `backend/alembic/versions/0005_performance_indexes.py`
 
 New database indexes:
+- `ix_cv_uploads_status_updated_at` - Speeds up stuck processing recovery (`status` + `updated_at`)
 - `ix_cv_uploads_user_id_created_at` — Speeds up history listing (user's CVs sorted by date)
 - `ix_analysis_results_cv_upload_id` — Speeds up result lookups by CV
 - `ix_job_descriptions_user_id` — Speeds up JD listing for a user
@@ -107,12 +108,33 @@ All critical UI states verified and complete:
 
 | Page | Loading | Empty | Error | Failed/Retry | Completed |
 |------|---------|-------|-------|------|-----------|
+| DashboardPage | ✅ | ✅ | ✅ (with retry) | ✅ | ✅ |
 | ProcessingPage | ✅ | ✅ | ✅ | ✅ **Enhanced** | ✅ |
-| ResultPageConnected | ✅ | ✅ | ✅ (with retry) | ✅ (409 handling) | ✅ |
+| ResultPageConnected | ✅ | ✅ | ✅ (with retry) | ✅ (409 -> Processing link) | ✅ |
 | HistoryPage | ✅ | ✅ | ✅ | N/A | ✅ |
+| JobDescriptionsPage | ✅ | ✅ | ✅ (with retry) | N/A | ✅ |
+| ProfilePage | ✅ | N/A | ✅ (with retry) | N/A | ✅ |
 | UploadPage | ✅ | N/A | ✅ | N/A | ✅ |
 
-**Enhancement**: Added prominent "Upload Again" and "View History" buttons on ProcessingPage when processing fails.
+**Enhancements**:
+- Added prominent "Upload Again" and "View History" buttons on ProcessingPage when processing fails.
+- Added shared frontend status model for `pending`, `processing`, `completed`, and `failed`.
+- Added shared status polling hook for ProcessingPage.
+- DashboardPage now reads real `/cv` data instead of legacy mock upload data.
+- Legacy static ResultPage was removed from runtime code; `/result` uses ResultPageConnected.
+
+---
+
+### 2.8 Parser / Validator / AI Boundary Cleanup
+
+Runtime analysis is now explicit:
+- `resume_parser.py` only converts supported files to text.
+- `resume_validation.py` only applies deterministic resume-text heuristics.
+- `resume_analyzer.py` only calls configured live AI providers.
+- `ai_response_normalizer.py` stays pure transformation logic shared by analysis and persistence.
+- `mock_analyzer.py` was moved to `app/services/legacy/` and is not imported by worker routes.
+
+`AI_MODE` was removed from tracked runtime config because the production path is live-provider only. Missing live provider configuration now fails fast through `LiveAIUnavailableError`.
 
 ---
 

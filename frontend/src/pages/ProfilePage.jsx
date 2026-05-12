@@ -57,7 +57,14 @@ export default function ProfilePage() {
 
           <section className="profile-card">
             {isLoading ? <p className="page-feedback">Loading your profile...</p> : null}
-            {!isLoading && message ? <p className="page-feedback error">{message}</p> : null}
+            {!isLoading && message ? (
+              <div className="empty-state">
+                <strong>{message}</strong>
+                <button type="button" className="nav-button secondary" onClick={loadProfile}>
+                  Retry
+                </button>
+              </div>
+            ) : null}
             {!isLoading && profile ? (
               <div className="profile-grid">
                 <div className="profile-item">

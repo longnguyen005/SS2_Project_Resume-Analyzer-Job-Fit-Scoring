@@ -1,3 +1,11 @@
+"""Resume file parsing boundary for the extraction stage.
+
+This module owns only file-to-text conversion for supported resume uploads.
+It does not validate whether the text is a resume, call AI providers, or touch
+database state; those responsibilities live in the extraction and analysis
+services.
+"""
+
 from __future__ import annotations
 
 import re

@@ -1,3 +1,11 @@
+import {
+  isCompletedCvStatus,
+  isFailedCvStatus,
+  isPendingCvStatus,
+  isProcessingCvStatus,
+  normalizeCvStatus,
+} from "./cvStatusModel";
+
 export const CV_PROCESSING_STEPS = [
   {
     icon: "1",
@@ -28,58 +36,67 @@ function getFailedStepIndex(failedStage) {
 }
 
 export function getProcessingProgress(status, failedStage) {
+  const normalizedStatus = normalizeCvStatus(status);
   const failedStepIndex = getFailedStepIndex(failedStage);
 
-  if (status === "completed") {
+  if (isCompletedCvStatus(normalizedStatus)) {
     return 100;
   }
-  if (status === "processing") {
+  if (isProcessingCvStatus(normalizedStatus)) {
     return 68;
   }
-  if (status === "failed") {
+  if (isFailedCvStatus(normalizedStatus)) {
     return [34, 68, 100][failedStepIndex] || 34;
   }
   return 25;
 }
 
 export function getProcessingStatusCopy(status, failureReason) {
-  if (status === "completed") {
+  const normalizedStatus = normalizeCvStatus(status);
+  if (isCompletedCvStatus(normalizedStatus)) {
     return "Analysis completed. Redirecting to your result...";
   }
-  if (status === "processing") {
+  if (isProcessingCvStatus(normalizedStatus)) {
     return "The resume text has been extracted. We are generating your analysis now.";
   }
-  if (status === "failed") {
+  if (isFailedCvStatus(normalizedStatus)) {
     return failureReason || "Processing stopped before the final report could be generated.";
   }
   return "Your upload was received. We are preparing the resume for analysis.";
 }
 
 export function getProcessingLoadingLabel(status) {
-  if (status === "completed") {
+  const normalizedStatus = normalizeCvStatus(status);
+  if (isCompletedCvStatus(normalizedStatus)) {
     return "Finalizing your report and opening the results page...";
   }
-  if (status === "processing") {
+  if (isProcessingCvStatus(normalizedStatus)) {
     return "AI analysis is running. This can take a few more seconds.";
   }
-  if (status === "failed") {
+  if (isFailedCvStatus(normalizedStatus)) {
     return "";
   }
   return "Upload received. We are validating and preparing your file now.";
 }
 
 export function shouldShowProcessingLoadingState(isLoadingStatus, status) {
-  return isLoadingStatus || status === "pending" || status === "processing" || status === "completed";
+  return (
+    isLoadingStatus
+    || isPendingCvStatus(status)
+    || isProcessingCvStatus(status)
+    || isCompletedCvStatus(status)
+  );
 }
 
 export function buildProcessingStepViews(status, failedStage) {
+  const normalizedStatus = normalizeCvStatus(status);
   const failedStepIndex = getFailedStepIndex(failedStage);
 
-  if (status === "completed") {
+  if (isCompletedCvStatus(normalizedStatus)) {
     return CV_PROCESSING_STEPS.map((step) => ({ ...step, state: "completed", badge: "Completed" }));
   }
 
-  if (status === "processing") {
+  if (isProcessingCvStatus(normalizedStatus)) {
     return CV_PROCESSING_STEPS.map((step, index) => {
       if (index === 0) {
         return { ...step, state: "completed", badge: "Completed" };
@@ -91,7 +108,7 @@ export function buildProcessingStepViews(status, failedStage) {
     });
   }
 
-  if (status === "failed") {
+  if (isFailedCvStatus(normalizedStatus)) {
     return CV_PROCESSING_STEPS.map((step, index) => {
       if (index < failedStepIndex) {
         return { ...step, state: "completed", badge: "Completed" };

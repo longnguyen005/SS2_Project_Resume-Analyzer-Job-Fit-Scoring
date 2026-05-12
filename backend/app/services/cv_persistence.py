@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import NamedTuple
 from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AnalysisResult, CategoryScore, CvUpload, Suggestion
-from app.schemas.cv import (
+from app.schemas.cv_internal import InternalCvCompleteRequest
+from app.schemas.cv_public import (
     CvHistoryAnalysisSummaryRead,
     CvHistoryItemRead,
     CvResultBreakdownItem,
@@ -15,7 +17,8 @@ from app.schemas.cv import (
     CvResultLegendItem,
     CvResultRead,
     CvResultSuggestion,
-    InternalCvCompleteRequest,
+    CvStatusRead,
+    CvUploadRead,
 )
 from app.services.ai_response_normalizer import (
     BreakdownItem,
@@ -27,7 +30,28 @@ from app.services.ai_response_normalizer import (
     status_from_score,
     summary_from_score,
 )
-from app.services.cv_state import load_cv_with_job_description
+from app.services.cv_queries import get_latest_analysis_result, load_cv_with_job_description
+
+
+class CompleteAnalysisResult(NamedTuple):
+    status: str
+    provider_name: str | None
+    processing_time_seconds: float | None
+    already_completed: bool = False
+
+
+def build_cv_upload_read(cv_upload: CvUpload) -> CvUploadRead:
+    return CvUploadRead.model_validate(cv_upload)
+
+
+def build_cv_status_read(cv_upload: CvUpload) -> CvStatusRead:
+    return CvStatusRead(
+        id=cv_upload.id,
+        status=cv_upload.status,
+        failure_reason=cv_upload.failure_reason,
+        failed_stage=cv_upload.failed_stage,
+        updated_at=cv_upload.updated_at,
+    )
 
 
 def deserialize_complete_payload(payload: InternalCvCompleteRequest) -> ResumeAnalysisPayload:
@@ -130,6 +154,38 @@ async def save_analysis_result(
     await db.commit()
     await db.refresh(cv_upload)
     return cv_upload
+
+
+async def complete_analysis_result(
+    db: AsyncSession,
+    cv_upload_id: UUID,
+    payload: InternalCvCompleteRequest,
+) -> CompleteAnalysisResult:
+    cv_upload = await load_cv_with_job_description(db, cv_upload_id)
+    if cv_upload is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CV upload not found")
+
+    latest_analysis = get_latest_analysis_result(cv_upload)
+    if cv_upload.status == "completed" and latest_analysis is not None:
+        return CompleteAnalysisResult(
+            status="completed",
+            provider_name=latest_analysis.ai_provider,
+            processing_time_seconds=latest_analysis.processing_time_seconds,
+            already_completed=True,
+        )
+
+    await save_analysis_result(
+        db=db,
+        cv_upload_id=cv_upload_id,
+        analysis_payload=deserialize_complete_payload(payload),
+        provider_name=payload.provider_name,
+        processing_time_seconds=payload.processing_time_seconds,
+    )
+    return CompleteAnalysisResult(
+        status="completed",
+        provider_name=payload.provider_name,
+        processing_time_seconds=payload.processing_time_seconds,
+    )
 
 
 def build_cv_result_read(cv_upload: CvUpload, analysis_result: AnalysisResult) -> CvResultRead:

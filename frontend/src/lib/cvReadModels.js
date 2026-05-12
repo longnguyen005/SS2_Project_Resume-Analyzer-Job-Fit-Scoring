@@ -1,3 +1,5 @@
+import { getCvStatusLabel, isCompletedCvStatus, normalizeCvStatus } from "./cvStatusModel";
+
 export function formatCvDate(value) {
   return new Date(value).toLocaleDateString("vi-VN", {
     day: "2-digit",
@@ -29,6 +31,7 @@ export function formatFileSize(size) {
 }
 
 export function buildHistoryRowViewModel(item) {
+  const status = normalizeCvStatus(item.status);
   return {
     id: item.id,
     file: item.filename,
@@ -36,8 +39,9 @@ export function buildHistoryRowViewModel(item) {
     date: formatCvDate(item.created_at),
     score: item.analysis_summary?.overall_score ?? "-",
     grade: item.analysis_summary?.grade ?? "Pending",
-    status: item.status,
-    canViewResult: item.status === "completed",
+    status,
+    statusLabel: getCvStatusLabel(status),
+    canViewResult: isCompletedCvStatus(status),
   };
 }
 

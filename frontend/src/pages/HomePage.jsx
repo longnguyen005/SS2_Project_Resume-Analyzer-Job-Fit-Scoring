@@ -20,6 +20,7 @@ export default function HomePage() {
 
   const navActions = isAuthenticated
     ? [
+        { label: "Dashboard", to: "/dashboard", variant: "ghost" },
         { label: "History", to: "/history", variant: "ghost" },
         { label: "Upload", to: "/upload", variant: "primary" },
       ]

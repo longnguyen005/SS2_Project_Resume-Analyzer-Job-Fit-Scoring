@@ -3,8 +3,9 @@
 Public user-facing routes stay under the standard prefixes such as `/auth`,
 `/jd`, and `/cv`.
 
-Internal workflow endpoints stay isolated under `/internal/cv` so the n8n
-pipeline and workers have a single, explicit integration surface.
+Internal workflow endpoints stay isolated under `/internal/cv`. Worker routes
+are intentionally not mounted here; each worker app exposes only its own
+internal router from its dedicated entrypoint.
 """
 
 from fastapi import APIRouter

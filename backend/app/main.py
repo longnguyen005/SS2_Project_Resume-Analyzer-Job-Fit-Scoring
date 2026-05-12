@@ -1,3 +1,10 @@
+"""Public API application entrypoint.
+
+This app owns user-facing HTTP APIs, backend-only workflow helpers under
+`/internal/cv`, and stuck-job recovery. Stage work is delegated to n8n and the
+dedicated worker apps.
+"""
+
 from __future__ import annotations
 
 import asyncio

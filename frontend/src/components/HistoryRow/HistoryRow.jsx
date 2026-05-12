@@ -1,10 +1,9 @@
 import { Link } from "react-router-dom";
+import { getCvStatusClassName } from "../../lib/cvStatusModel";
 import "./HistoryRow.css";
 
 export default function HistoryRow({ item }) {
-  const statusClassName = `status-pill${
-    item.status === "completed" ? " completed" : item.status === "failed" ? " failed" : ""
-  }`;
+  const statusClassName = `status-pill${getCvStatusClassName(item.status)}`;
 
   return (
     <div className="history-row">
@@ -24,7 +23,7 @@ export default function HistoryRow({ item }) {
         <strong>{item.grade}</strong>
         <small>Analysis grade</small>
       </div>
-      <span className={statusClassName}>{item.status}</span>
+      <span className={statusClassName}>{item.statusLabel}</span>
       <div className="history-meta">
         {item.canViewResult ? (
           <Link className="table-button" to={`/result?cvId=${item.id}`}>
