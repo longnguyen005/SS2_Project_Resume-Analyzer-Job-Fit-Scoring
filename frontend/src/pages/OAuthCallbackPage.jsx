@@ -10,7 +10,6 @@ export default function OAuthCallbackPage() {
   useEffect(() => {
     async function completeOAuth() {
       const accessToken = searchParams.get("access_token");
-      const provider = searchParams.get("provider");
       const error = searchParams.get("error");
 
       if (error) {
@@ -44,16 +43,7 @@ export default function OAuthCallbackPage() {
       login(accessToken);
       await refreshCurrentUser();
 
-      navigate("/", {
-        replace: true,
-        state: {
-          flash: {
-            type: "success",
-            title: "Signed In",
-            message: `You are now signed in with ${provider || "your social account"}.`,
-          },
-        },
-      });
+      navigate("/", { replace: true });
     }
 
     completeOAuth();
